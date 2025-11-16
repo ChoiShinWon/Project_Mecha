@@ -4,20 +4,23 @@
 #include "GA_MissileFire_Enemy.h"
 #include "EnemyMecha.h"
 #include "AbilitySystemComponent.h"
-
 #include "GameplayTagContainer.h"
-#include "GameFramework/Character.h"
-#include "Components/SkeletalMeshComponent.h"
 #include "GameFramework/ProjectileMovementComponent.h"
+#include "GameFramework/Character.h"
+#include "TimerManager.h"
+#include "Components/SkeletalMeshComponent.h"
+#include "Engine/World.h"
 
+
+// 생성자
 UGA_MissileFire_Enemy::UGA_MissileFire_Enemy()
 {
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
 
 	AbilityTags.AddTag(FGameplayTag::RequestGameplayTag(TEXT("Ability.Missile.Enemy")));
 
-	MuzzleSocketName = TEXT("Muzzle");
-	MissileDamage = 50.f;
+	MuzzleSocketName = TEXT("Muzzle"); // 미사일 발사할 소켓 이름
+	MissileDamage = 70.f; // 미사일 데미지
 }
 
 void UGA_MissileFire_Enemy::ActivateAbility(
@@ -100,5 +103,9 @@ void UGA_MissileFire_Enemy::ActivateAbility(
 
 	}
 
+	/*StartCooldown(ActorInfo);*/
+
 	EndAbility(Handle, ActorInfo, ActivationInfo, false, false);
 }
+
+
