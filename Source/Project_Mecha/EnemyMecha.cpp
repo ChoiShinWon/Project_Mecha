@@ -53,11 +53,24 @@ void AEnemyMecha::BeginPlay()
 	{
 		AbilitySystem->InitAbilityActorInfo(this, this);
 
-		if (HasAuthority() && MissileAbilityClass_Enemy)
+		if (HasAuthority())
 		{
-			AbilitySystem->GiveAbility(
-				FGameplayAbilitySpec(MissileAbilityClass_Enemy, 1, 0)
-			);
+			// === 미사일 어빌리티 등록 ===
+			if (MissileAbilityClass_Enemy)
+			{
+				AbilitySystem->GiveAbility(
+					FGameplayAbilitySpec(MissileAbilityClass_Enemy, 1, 0)
+				);
+			}
+
+			//  Dash 어빌리티 등록 ===
+			if (DashAbilityClass_Enemy)
+			{
+				AbilitySystem->GiveAbility(
+					FGameplayAbilitySpec(DashAbilityClass_Enemy, 1, 1)
+					//  → InputID는 1로 줬어. 실제로 InputID 안 쓴다면 0/1 아무거나 상관 없음.
+				);
+			}
 		}
 	}
 
@@ -78,6 +91,7 @@ void AEnemyMecha::BeginPlay()
 
 	UE_LOG(LogTemp, Warning, TEXT("AEnemyMecha::BeginPlay - %s"), *GetName());
 }
+
 
 void AEnemyMecha::InitializeAttributes()
 {
@@ -258,4 +272,14 @@ void AEnemyMecha::FireMissileFromNotify()
 			MoveComp->Velocity = SpawnRotation.Vector() * MoveComp->InitialSpeed;
 		}
 	}
+}
+
+
+//  Dash 발동 함수
+void AEnemyMecha::FireDashAbility()
+{
+	if (!AbilitySystem || !DashAbilityClass_Enemy)
+		return;
+
+	AbilitySystem->TryActivateAbilityByClass(DashAbilityClass_Enemy);
 }

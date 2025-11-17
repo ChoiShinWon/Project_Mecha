@@ -55,6 +55,11 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Combat")
 	void FireMissileFromNotify();
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Abilities")
+	TSubclassOf<UGameplayAbility> DashAbilityClass_Enemy;
+
+	UFUNCTION(BlueprintCallable, Category = "Abilities")
+	void FireDashAbility();
 protected:
 
 	// 플레이어와 같은 AttributeSet 사용 (Health, MaxHealth 등)
