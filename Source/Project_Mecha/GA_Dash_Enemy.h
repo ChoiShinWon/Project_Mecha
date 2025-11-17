@@ -27,6 +27,12 @@ protected:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Dash")
     float MinStopDistance = 300.0f;      // 타겟과 이 정도는 남겨두고 멈춤
 
+    // 실제 이동 거리(TravelDistance)에 곱해지는 배율
+    // 1.0 : Distance - MinStopDistance 만큼
+    // 2.0 : 그 2배 거리만큼 더 강하게 돌진
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Dash")
+    float DashSpeedMultiplier = 2.0f;
+
     // == 태그 (정리용) ==
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tags")
     FGameplayTag Tag_AbilityDash;        // Ability.Dash.Enemy
@@ -44,6 +50,12 @@ protected:
     // == 대쉬 몽타주 (선택) ==
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Dash|Animation")
     UAnimMontage* DashMontage;
+
+    // == 대쉬 동안 Movement 설정 저장용 ==
+    bool bSavedMovementParams = false;
+
+    float SavedBrakingFrictionFactor = 0.0f;
+    float SavedBrakingDecelWalking = 0.0f;
 
     FTimerHandle DashTimerHandle;
 
