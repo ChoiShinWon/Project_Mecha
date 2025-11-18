@@ -66,10 +66,21 @@ void UWBP_MechaHUD::SetHealthPercent(float InPercent)
     const float Clamped = FMath::Clamp(InPercent, 0.f, 1.f);
     PB_Health->SetPercent(Clamped);
 
+    // === HP 색상 변경 (Enemy와 동일 3단계) ===
+    {
+        const FLinearColor HPColor =
+            (Clamped >= HealthCautionThreshold) ? HealthColorHigh :
+            (Clamped >= HealthWarningThreshold) ? HealthColorMid :
+            HealthColorLow;
+
+        PB_Health->SetFillColorAndOpacity(HPColor);
+    }
+
     // === LOW HP WARNING 처리 ===
     if (Txt_LowHPWarning)
     {
-        const float WarningThresholdHP = 0.3f; // 30% 기준
+        // 경고 임계값은 HealthWarningThreshold 재사용
+        const float WarningThresholdHP = HealthWarningThreshold; // 기본 0.3
 
         if (Clamped <= WarningThresholdHP)
         {
@@ -89,6 +100,7 @@ void UWBP_MechaHUD::SetHealthPercent(float InPercent)
         }
     }
 }
+
 
 
 

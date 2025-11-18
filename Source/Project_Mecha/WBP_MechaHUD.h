@@ -90,6 +90,24 @@ protected:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI|Energy")
     FLinearColor ColorLow = FLinearColor(1.f, 0.25f, 0.25f, 1.f);
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI|Health")
+    float HealthCautionThreshold = 0.6f;   // 60% 이상: 초록
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI|Health")
+    float HealthWarningThreshold = 0.3f;   // 30~60%: 노랑
+
+    // 풀피 구간: 쨍한 초록
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI|Health")
+    FLinearColor HealthColorHigh = FLinearColor(0.0f, 0.9f, 0.1f, 1.f);
+
+    // 중간 구간: 진한 노랑-주황
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI|Health")
+    FLinearColor HealthColorMid = FLinearColor(1.0f, 0.7f, 0.0f, 1.f);
+
+    // 위기 구간: 진한 빨강
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI|Health")
+    FLinearColor HealthColorLow = FLinearColor(0.9f, 0.05f, 0.05f, 1.f);
+
     /** 에너지/기타 Attribute 리스너를 BP에서 묶어주는 이벤트 */
     UFUNCTION(BlueprintImplementableEvent)
     void BP_BindAttributeListeners();
