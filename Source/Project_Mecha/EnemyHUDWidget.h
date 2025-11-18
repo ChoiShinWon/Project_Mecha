@@ -9,6 +9,7 @@ class UProgressBar;
 class UTextBlock;
 class UAbilitySystemComponent;
 class UMechaAttributeSet;
+class UWidgetAnimation;
 
 /**
  * 적 전용 HUD 위젯 (체력바 + 텍스트)
@@ -22,6 +23,10 @@ public:
     // Enemy 쪽에서 ASC + AttributeSet 넘겨줄 때 호출
     UFUNCTION(BlueprintCallable, Category = "Mecha|UI")
     void InitWithASC(UAbilitySystemComponent* InASC, UMechaAttributeSet* InAttributes);
+
+    // 죽었을때 호출할 함수 선언
+    UFUNCTION(BlueprintCallable, Category = "Mecha|UI")
+    void OnOwnerDead();
 
 protected:
     virtual void NativeDestruct() override;
@@ -45,6 +50,9 @@ protected:
     // HP가 줄어들 때 재생할 애니메이션
     UPROPERTY(Transient, meta = (BindWidgetAnimOptional))
     UWidgetAnimation* HitFlash;
+
+    UPROPERTY(Transient, meta = (BindWidgetAnimOptional))
+    UWidgetAnimation* DeathFade;
 
     // Health 변경 델리게이트 핸들
     FDelegateHandle HealthChangedHandle;

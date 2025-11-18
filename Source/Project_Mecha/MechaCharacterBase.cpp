@@ -433,8 +433,22 @@ void AMechaCharacterBase::Input_Reload_Pressed()
 void AMechaCharacterBase::OnHealthChanged(const FOnAttributeChangeData& Data)
 {
     if (!MechaHUDWidget || !AttributeSet) return;
-    const float M = AttributeSet->GetMaxHealth();
-    MechaHUDWidget->SetHealthPercent(M > 0.f ? Data.NewValue / M : 0.f);
+
+    const float OldHealth = Data.OldValue;
+    const float NewHealth = Data.NewValue;
+    const float MaxHealth = AttributeSet->GetMaxHealth();
+
+    // 1) HP 바 갱신
+    MechaHUDWidget->SetHealthPercent(MaxHealth > 0.f ? NewHealth / MaxHealth : 0.f);
+
+    // 2) HP가 줄어들었을 때만 화면 테두리 연출 실행
+    if (NewHealth < OldHealth)
+    {
+        const float Damage = OldHealth - NewHealth;
+
+        // BP에서 구현한 이벤트 호출
+        MechaHUDWidget->PlayDamageOverlay(Damage);
+    }
 }
 
 float AMechaCharacterBase::GetHealth() const

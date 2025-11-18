@@ -29,10 +29,10 @@ void UWBP_MechaHUD::InitWithASC(UAbilitySystemComponent* InASC, const UMechaAttr
     ASC = InASC;
     Attrs = InAttrs;
 
-    // ✅ 기존 에너지 바인딩은 BP에서 처리 (기존 흐름 유지)
+    // 기존 에너지 바인딩은 BP에서 처리 (기존 흐름 유지)
     BP_BindAttributeListeners();
 
-    // ✅ 탄약 바인딩 "추가"
+    // 탄약 바인딩 추가
     UnbindAmmoListeners();   // 중복 방지
     BindAmmoListeners();
     RefreshAmmoOnce();       // 초기값 즉시 표시
@@ -66,8 +66,32 @@ void UWBP_MechaHUD::SetHealthPercent(float InPercent)
     const float Clamped = FMath::Clamp(InPercent, 0.f, 1.f);
     PB_Health->SetPercent(Clamped);
 
- 
+    // === LOW HP WARNING 처리 ===
+    if (Txt_LowHPWarning)
+    {
+        const float WarningThresholdHP = 0.3f; // 30% 기준
+
+        if (Clamped <= WarningThresholdHP)
+        {
+            Txt_LowHPWarning->SetVisibility(ESlateVisibility::Visible);
+            if (LowHP_WarningPulse)
+            {
+                PlayAnimation(LowHP_WarningPulse, 0.f, 0); // 0 = 무한 루프
+            }
+        }
+        else
+        {
+            if (LowHP_WarningPulse)
+            {
+                StopAnimation(LowHP_WarningPulse);
+            }
+            Txt_LowHPWarning->SetVisibility(ESlateVisibility::Hidden);
+        }
+    }
 }
+
+
+
 
 // ===================== 탄약 바인딩 구현 =====================
 

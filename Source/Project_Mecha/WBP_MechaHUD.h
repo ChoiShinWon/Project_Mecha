@@ -10,6 +10,7 @@
 // - Automatically detects Attribute changes via ASC and AttributeSet to update UI.
 
 #pragma once
+
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
 #include "WBP_MechaHUD.generated.h"
@@ -18,6 +19,8 @@ class UProgressBar;
 class UTextBlock;
 class UAbilitySystemComponent;
 class UMechaAttributeSet;
+class UWidgetAnimation;
+
 
 // 설명:
 // - 플레이어 HUD 위젯. 에너지, 체력, 탄약 UI를 관리한다.
@@ -32,31 +35,40 @@ class PROJECT_MECHA_API UWBP_MechaHUD : public UUserWidget
     GENERATED_BODY()
 public:
 
-
-
-    /** ĳ���Ϳ��� HUD ���� ���� ȣ�� (ASC/Attrs ����) */
+    /** 캐릭터에서 HUD 초기 설정 호출 (ASC/Attrs 전달) */
     UFUNCTION(BlueprintCallable)
     void InitWithASC(UAbilitySystemComponent* InASC, const UMechaAttributeSet* InAttrs);
 
-    /** ������ ���α׷����� ���� (���� ���� ����) */
+    /** 에너지 프로그레스바 설정 (비율 및 색상 변경) */
     UFUNCTION(BlueprintCallable)
     void SetEnergyPercent(float Ratio);
 
-
+    /** 체력 프로그레스바 설정 */
     UFUNCTION(BlueprintCallable)
     void SetHealthPercent(float InPercent);
 
+    UFUNCTION(BlueprintImplementableEvent, Category = "Mecha|UI")
+    void PlayDamageOverlay(float DamageAmount);
+
+
+
 protected:
-    // ===================== ���� ������ UI =====================
-    /** UMG���� �̸� "PB_Energy" �� ���ε��Ǿ� �־�� �� */
+    // ===================== 에너지 / 체력 UI =====================
+    /** UMG에서 이름 "PB_Energy"로 바인딩 */
     UPROPERTY(meta = (BindWidget))
     UProgressBar* PB_Energy = nullptr;
 
-
-    UPROPERTY(meta = (BindWidget))                
+    /** UMG에서 이름 "PB_Health"로 바인딩 */
+    UPROPERTY(meta = (BindWidget))
     UProgressBar* PB_Health = nullptr;
 
-    /** GAS ���� (�б� ����) */
+    UPROPERTY(meta = (BindWidgetOptional))
+    UTextBlock* Txt_LowHPWarning = nullptr;
+
+    UPROPERTY(meta = (BindWidgetAnimOptional), Transient)
+    UWidgetAnimation* LowHP_WarningPulse = nullptr;
+
+    /** GAS 참조 (읽기 전용) */
     UPROPERTY(BlueprintReadOnly, Category = "GAS")
     UAbilitySystemComponent* ASC = nullptr;
 
@@ -64,10 +76,10 @@ protected:
     const UMechaAttributeSet* Attrs = nullptr;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI|Energy")
-    float CautionThreshold = 0.6f;     // 60% �̻�: ����
+    float CautionThreshold = 0.6f;     // 60% 이상: 안전
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI|Energy")
-    float WarningThreshold = 0.3f;     // 30~60%: �̵�
+    float WarningThreshold = 0.3f;     // 30~60%: 경고
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI|Energy")
     FLinearColor ColorHigh = FLinearColor(0.25f, 0.9f, 1.f, 1.f);
@@ -78,37 +90,38 @@ protected:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI|Energy")
     FLinearColor ColorLow = FLinearColor(1.f, 0.25f, 0.25f, 1.f);
 
-    /** ����: BP���� ������ �� ���ε��ϴ� �̺�Ʈ (�ǵ帮�� ����) */
+    /** 에너지/기타 Attribute 리스너를 BP에서 묶어주는 이벤트 */
     UFUNCTION(BlueprintImplementableEvent)
     void BP_BindAttributeListeners();
 
-    // ===================== [�߰�] ź�� UI =====================
-    /** ������ �ڵ� ���õ�(��� BP �̺�Ʈ�� ó�� ����) */
+    // ===================== [추가] 탄약 UI =====================
+    /** 탄창 텍스트 ("30 / 30") */
     UPROPERTY(meta = (BindWidgetOptional))
-    UTextBlock* TxtAmmoMag = nullptr;        // "30 / 30"
+    UTextBlock* TxtAmmoMag = nullptr;
 
+    /** 예비 탄약 텍스트 ("90") */
     UPROPERTY(meta = (BindWidgetOptional))
-    UTextBlock* TxtAmmoReserve = nullptr;    // "90"
+    UTextBlock* TxtAmmoReserve = nullptr;
 
-    /** (����) BP���� �߰� ����� �� */
+    /** (선택) BP에서 추가 연출용 */
     UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "Update Ammo UI (Mag/Max/Reserve)"))
     void BP_UpdateAmmoUI(int32 Mag, int32 MaxMag, int32 Reserve);
 
 private:
-    // ��������Ʈ �ڵ�(���� ����)
+    // 델리게이트 핸들
     FDelegateHandle HandleMag;
     FDelegateHandle HandleMaxMag;
     FDelegateHandle HandleReserve;
 
-    // ���ε�/����
+    // 탄약 리스너 바인딩/해제
     void BindAmmoListeners();
     void UnbindAmmoListeners();
 
-    // ��� 1ȸ �ݿ� & �ǹݿ�
+    // 초기 1회 쿼리 & UI 반영
     void RefreshAmmoOnce() const;
     void ApplyAmmoToUI(int32 Mag, int32 MaxMag, int32 Reserve) const;
 
-    // �ݹ�
+    // 콜백
     void OnMagChanged(const struct FOnAttributeChangeData& Data);
     void OnMaxMagChanged(const struct FOnAttributeChangeData& Data);
     void OnReserveChanged(const struct FOnAttributeChangeData& Data);

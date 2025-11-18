@@ -5,6 +5,8 @@
 #include "GameplayEffectTypes.h"
 #include "Components/ProgressBar.h"
 #include "Components/TextBlock.h"
+#include "Animation/WidgetAnimation.h"
+#include "TimerManager.h"  
 
 void UEnemyHUDWidget::InitWithASC(UAbilitySystemComponent* InASC, UMechaAttributeSet* InAttributes)
 {
@@ -115,4 +117,44 @@ void UEnemyHUDWidget::NativeDestruct()
     }
 
     Super::NativeDestruct();
+}
+
+void UEnemyHUDWidget::OnOwnerDead()
+{
+    // 이미 파괴되는 중이면 의미 없음
+    if (IsDesignTime())
+    {
+        return;
+    }
+
+    // DeathFade 애니메이션이 있으면 재생
+    if (DeathFade)
+    {
+        PlayAnimation(DeathFade, 0.f, 1);
+
+        // 애니메이션 끝날 때 완전히 숨기고 싶으면 타이머로 처리
+        const float Duration = DeathFade->GetEndTime();
+
+        if (Duration > 0.f)
+        {
+            FTimerHandle TimerHandle;
+            if (UWorld* World = GetWorld())
+            {
+                World->GetTimerManager().SetTimer(
+                    TimerHandle,
+                    [this]()
+                    {
+                        SetVisibility(ESlateVisibility::Collapsed);
+                    },
+                    Duration,
+                    false
+                );
+            }
+        }
+    }
+    else
+    {
+        // 애니메이션이 없으면 바로 숨기기
+        SetVisibility(ESlateVisibility::Collapsed);
+    }
 }

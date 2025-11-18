@@ -196,6 +196,19 @@ void AEnemyMecha::HandleDeath()
         }
     }
 
+
+    if (EnemyHUDWidgetComp)
+    {
+        if (UUserWidget* WidgetObject = EnemyHUDWidgetComp->GetUserWidgetObject())
+        {
+            if (UEnemyHUDWidget* EnemyHUD = Cast<UEnemyHUDWidget>(WidgetObject))
+            {
+                EnemyHUD->OnOwnerDead();
+            }
+        }
+    }
+
+
     // 몇 초 뒤에 삭제 
     SetLifeSpan(1.0f);
 }
