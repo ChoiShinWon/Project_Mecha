@@ -1,57 +1,67 @@
+// MissionManager.cpp
+
 #include "MissionManager.h"
-#include "Kismet/GameplayStatics.h"
+#include "EnemyMecha.h"
 #include "Engine/World.h"
 
 AMissionManager::AMissionManager()
 {
     PrimaryActorTick.bCanEverTick = false;
+    bReplicates = true;   // ★ 반드시 켜라
 }
 
-void AMissionManager::BeginPlay()
-{
-    Super::BeginPlay();
 
-    // 레벨 시작 시 자동으로 미션 시작
-    StartMission();
-}
 
 void AMissionManager::StartMission()
 {
-    MissionState = EMissionState::InProgress;
-    CurrentKillCount = 0;
+    // 서버에서만 미션 시작
+    if (!HasAuthority())
+    {
+        return;
+    }
 
-    UE_LOG(LogTemp, Log, TEXT("MissionManager: Mission Started (RequiredKillCount = %d)"), RequiredKillCount);
+    CurrentKillCount = 0;
+    bMissionActive = true;
+    MissionStartTime = GetWorld()->GetTimeSeconds();
+
+    // 서버 → 전체에게 전달
+    Multicast_OnMissionStarted(RequiredKillCount);
 }
 
-void AMissionManager::NotifyEnemyKilled(AActor* DeadEnemy)
+void AMissionManager::NotifyEnemyKilled(AEnemyMecha* KilledEnemy)
 {
-    if (MissionState != EMissionState::InProgress)
+    if (!HasAuthority() || !bMissionActive)
     {
         return;
     }
 
     ++CurrentKillCount;
 
-    UE_LOG(LogTemp, Log, TEXT("MissionManager: Enemy killed. %d / %d"),
-        CurrentKillCount, RequiredKillCount);
+    Multicast_OnMissionProgress(CurrentKillCount, RequiredKillCount);
 
     if (CurrentKillCount >= RequiredKillCount)
     {
-        HandleMissionCleared();
+        bMissionActive = false;
+        MissionEndTime = GetWorld()->GetTimeSeconds();
+
+        Multicast_OnMissionCleared();
     }
 }
 
-void AMissionManager::HandleMissionCleared()
+// === Multicast 구현부 ===
+
+void AMissionManager::Multicast_OnMissionStarted_Implementation(int32 InRequiredKillCount)
 {
-    if (MissionState == EMissionState::Cleared)
-    {
-        return;
-    }
+    // 서버 + 모든 클라에서 다 실행
+    OnMissionStartedBP(InRequiredKillCount);
+}
 
-    MissionState = EMissionState::Cleared;
+void AMissionManager::Multicast_OnMissionProgress_Implementation(int32 InCurrentKillCount, int32 InRequiredKillCount)
+{
+    OnMissionProgressBP(InCurrentKillCount, InRequiredKillCount);
+}
 
-    UE_LOG(LogTemp, Log, TEXT("MissionManager: Mission Cleared"));
-
-    // 여기서 BP 쪽 연출 실행
+void AMissionManager::Multicast_OnMissionCleared_Implementation()
+{
     OnMissionClearedBP();
 }

@@ -50,6 +50,34 @@ public:
     UFUNCTION(BlueprintImplementableEvent, Category = "Mecha|UI")
     void PlayDamageOverlay(float DamageAmount);
 
+    // BP에서 실제 구현할 이벤트 (그래프 짤 곳)
+    UFUNCTION(BlueprintImplementableEvent, Category = "Mission")
+    void BP_UpdateMissionStarted(int32 RequiredKillCount);
+
+    UFUNCTION(BlueprintImplementableEvent, Category = "Mission")
+    void BP_UpdateMissionProgress(int32 CurrentKillCount, int32 RequiredKillCount);
+
+    UFUNCTION(BlueprintImplementableEvent, Category = "Mission")
+    void BP_ShowMissionClear(float MissionTime);
+
+    // 다른 BP에서 호출할 "정식 함수"
+    UFUNCTION(BlueprintCallable, Category = "Mission")
+    void UpdateMissionStarted(int32 RequiredKillCount)
+    {
+        BP_UpdateMissionStarted(RequiredKillCount);
+    }
+
+    UFUNCTION(BlueprintCallable, Category = "Mission")
+    void UpdateMissionProgress(int32 CurrentKillCount, int32 RequiredKillCount)
+    {
+        BP_UpdateMissionProgress(CurrentKillCount, RequiredKillCount);
+    }
+
+    UFUNCTION(BlueprintCallable, Category = "Mission")
+    void ShowMissionClear(float MissionTime)
+    {
+        BP_ShowMissionClear(MissionTime);
+    }
 
 
 protected:

@@ -101,6 +101,15 @@ void AEnemyMecha::BeginPlay()
                     UE_LOG(LogTemp, Warning, TEXT("EnemyMecha: MissionManager not found in level"));
                 }
             }
+
+            if (EnemyHUDWidgetComp && AbilitySystem && AttributeSet)
+            {
+                UUserWidget* WidgetObject = EnemyHUDWidgetComp->GetUserWidgetObject();
+                if (UEnemyHUDWidget* EnemyHUD = Cast<UEnemyHUDWidget>(WidgetObject))
+                {
+                    EnemyHUD->InitWithASC(AbilitySystem, AttributeSet);
+                }
+            }
         }
     }
 
@@ -115,11 +124,11 @@ void AEnemyMecha::BeginPlay()
     {
         HealthChangedHandle =
             AbilitySystem
-            ->GetGameplayAttributeValueChangeDelegate(AttributeSet->GetHealthAttribute())
+            ->GetGameplayAttributeValueChangeDelegate(UMechaAttributeSet::GetHealthAttribute())
             .AddUObject(this, &AEnemyMecha::OnHealthChanged);
     }
 
-    // === Enemy HUD InitWithASC 연결 ===  ★ 추가 블록
+    // === Enemy HUD InitWithASC 연결 ===   
     if (EnemyHUDWidgetComp && AbilitySystem && AttributeSet)
     {
         UUserWidget* WidgetObject = EnemyHUDWidgetComp->GetUserWidgetObject();
@@ -237,16 +246,33 @@ void AEnemyMecha::HandleDeath()
 
 void AEnemyMecha::OnHealthChanged(const FOnAttributeChangeData& Data)
 {
+    const float NewHealth = Data.NewValue;
+    const float MaxHealth = AttributeSet ? AttributeSet->GetMaxHealth() : 1.f;
+
+    // === 1) HUD에 체력 갱신 전달 ===
+    if (EnemyHUDWidgetComp)
+    {
+        if (UUserWidget* WidgetObject = EnemyHUDWidgetComp->GetUserWidgetObject())
+        {
+            if (UEnemyHUDWidget* EnemyHUD = Cast<UEnemyHUDWidget>(WidgetObject))
+            {
+                EnemyHUD->ApplyHealth(NewHealth, MaxHealth);
+            }
+        }
+    }
+
+    // === 2) 이미 죽었으면 더 처리할 필요 없음 ===
     if (bIsDead)
     {
         return;
     }
 
-    if (Data.NewValue <= 0.f)
+    // === 3) 0 이하로 떨어지면 죽음 처리 ===
+    if (NewHealth <= 0.f)
     {
         bIsDead = true;
 
-        // Dead 태그 추가 (나중에 BT/GA에서 체크 가능)
+        // Dead 태그 추가
         if (AbilitySystem)
         {
             AbilitySystem->AddLooseGameplayTag(
@@ -257,6 +283,7 @@ void AEnemyMecha::OnHealthChanged(const FOnAttributeChangeData& Data)
         HandleDeath();
     }
 }
+
 
 void AEnemyMecha::FireMissileAbility()
 {

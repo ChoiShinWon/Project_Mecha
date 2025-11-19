@@ -14,6 +14,8 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "Engine/Engine.h"
 #include "Engine/GameViewportClient.h"
+#include "MissionManager.h"
+#include "Kismet/GameplayStatics.h"
 
 AMechaCharacterBase::AMechaCharacterBase()
 {
@@ -161,6 +163,8 @@ void AMechaCharacterBase::BeginPlay()
                     const float M = AttributeSet->GetMaxHealth();
                     MechaHUDWidget->SetHealthPercent(M > 0.f ? H / M : 0.f);
                 }
+
+               
             }
             else
             {
@@ -460,3 +464,5 @@ float AMechaCharacterBase::GetMaxHealth() const
 {
     return AttributeSet ? AttributeSet->GetMaxHealth() : 0.f;
 }
+
+

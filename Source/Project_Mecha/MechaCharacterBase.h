@@ -113,6 +113,7 @@ public:
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon")
     USceneComponent* MuzzleLocation;
 
+
 protected:
     UPROPERTY(EditDefaultsOnly, Category = "GAS")
     int32 HoverInputID = 2;

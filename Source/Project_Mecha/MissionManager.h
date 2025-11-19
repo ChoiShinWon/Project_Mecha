@@ -1,17 +1,12 @@
+// MissionManager.h
+
 #pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "MissionManager.generated.h"
 
-UENUM(BlueprintType)
-enum class EMissionState : uint8
-{
-    Inactive,
-    InProgress,
-    Cleared,
-    Failed
-};
+class AEnemyMecha;
 
 UCLASS()
 class PROJECT_MECHA_API AMissionManager : public AActor
@@ -21,33 +16,52 @@ class PROJECT_MECHA_API AMissionManager : public AActor
 public:
     AMissionManager();
 
-protected:
-    virtual void BeginPlay() override;
+    // === 미션 상태 ===
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mission")
+    int32 RequiredKillCount = 5;
 
-public:
-    // 필요 킬 수 (에디터에서 설정 가능)
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mission")
-    int32 RequiredKillCount = 10;
-
-    // 현재까지 잡은 적 수
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Mission")
+    UPROPERTY(BlueprintReadOnly, Category = "Mission")
     int32 CurrentKillCount = 0;
 
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Mission")
-    EMissionState MissionState = EMissionState::Inactive;
+    UPROPERTY(BlueprintReadOnly, Category = "Mission")
+    bool bMissionActive = false;
 
-    // 레벨 시작 시 자동으로 부를 거지만, 나중에 수동 시작도 가능하게 둠
     UFUNCTION(BlueprintCallable, Category = "Mission")
     void StartMission();
 
-    // 적이 죽을 때 Enemy가 이 함수를 호출
     UFUNCTION(BlueprintCallable, Category = "Mission")
-    void NotifyEnemyKilled(AActor* DeadEnemy);
+    void NotifyEnemyKilled(AEnemyMecha* KilledEnemy);
+
+    UFUNCTION(BlueprintPure, Category = "Mission")
+    float GetMissionClearDuration() const
+    {
+        return (MissionEndTime > MissionStartTime)
+            ? (MissionEndTime - MissionStartTime)
+            : 0.f;
+    }
+
 
 protected:
-    void HandleMissionCleared();
+    float MissionStartTime = 0.f;
+    float MissionEndTime = 0.f;
 
-    // 미션 클리어 시 BP에서 연출 붙이는 이벤트
-    UFUNCTION(BlueprintImplementableEvent, Category = "Mission")
+    // === BP에서 구현할 이벤트들 ===
+    UFUNCTION(BlueprintImplementableEvent, Category = "Mission|BP")
+    void OnMissionStartedBP(int32 InRequiredKillCount);
+
+    UFUNCTION(BlueprintImplementableEvent, Category = "Mission|BP")
+    void OnMissionProgressBP(int32 InCurrentKillCount, int32 InRequiredKillCount);
+
+    UFUNCTION(BlueprintImplementableEvent, Category = "Mission|BP")
     void OnMissionClearedBP();
+
+    // === 서버 → 모든 클라로 브로드캐스트 ===
+    UFUNCTION(NetMulticast, Reliable)
+    void Multicast_OnMissionStarted(int32 InRequiredKillCount);
+
+    UFUNCTION(NetMulticast, Reliable)
+    void Multicast_OnMissionProgress(int32 InCurrentKillCount, int32 InRequiredKillCount);
+
+    UFUNCTION(NetMulticast, Reliable)
+    void Multicast_OnMissionCleared();
 };

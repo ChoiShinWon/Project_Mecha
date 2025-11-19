@@ -12,9 +12,12 @@ class UMechaAttributeSet;
 class UGameplayEffect;
 class UBehaviorTree;
 class UGameplayAbility;
+class UEnemyHUDWidget;
 class UWidgetComponent;              
 class AMissionManager;
 struct FOnAttributeChangeData;
+
+
 
 
 UCLASS()
@@ -103,7 +106,7 @@ protected:
 
     // === Enemy HUD 위젯 컴포넌트 ===
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UI", meta = (AllowPrivateAccess = "true"))
-    UWidgetComponent* EnemyHUDWidgetComp;    // ★ 추가
+    UWidgetComponent* EnemyHUDWidgetComp;    // 
 
     UPROPERTY()
     AMissionManager* MissionManager = nullptr;
