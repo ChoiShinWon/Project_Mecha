@@ -17,9 +17,12 @@
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "Engine/World.h"
 
-#include "Components/WidgetComponent.h"   // ★ 추가
-#include "EnemyHUDWidget.h"              // ★ 추가 (UEnemyHUDWidget)
-#include "Blueprint/UserWidget.h"        // ★ 추가
+#include "MissionManager.h"
+#include "Kismet/GameplayStatics.h"
+
+#include "Components/WidgetComponent.h"   // 
+#include "EnemyHUDWidget.h"              //  (UEnemyHUDWidget)
+#include "Blueprint/UserWidget.h"        // 
 
 AEnemyMecha::AEnemyMecha()
 {
@@ -82,6 +85,21 @@ void AEnemyMecha::BeginPlay()
                 AbilitySystem->GiveAbility(
                     FGameplayAbilitySpec(DashAbilityClass_Enemy, 1, 1)
                 );
+            }
+
+            // 미션 매니저 찾기
+            if (MissionManager == nullptr)
+            {
+                AActor* Found = UGameplayStatics::GetActorOfClass(GetWorld(), AMissionManager::StaticClass());
+                if (Found)
+                {
+                    MissionManager = Cast<AMissionManager>(Found);
+                    UE_LOG(LogTemp, Log, TEXT("EnemyMecha: Found MissionManager %s"), *MissionManager->GetName());
+                }
+                else
+                {
+                    UE_LOG(LogTemp, Warning, TEXT("EnemyMecha: MissionManager not found in level"));
+                }
             }
         }
     }
@@ -208,6 +226,10 @@ void AEnemyMecha::HandleDeath()
         }
     }
 
+    if (MissionManager)
+    {
+        MissionManager->NotifyEnemyKilled(this);
+    }
 
     // 몇 초 뒤에 삭제 
     SetLifeSpan(1.0f);

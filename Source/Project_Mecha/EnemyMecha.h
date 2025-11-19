@@ -12,8 +12,10 @@ class UMechaAttributeSet;
 class UGameplayEffect;
 class UBehaviorTree;
 class UGameplayAbility;
-class UWidgetComponent;              // ★ 추가
+class UWidgetComponent;              
+class AMissionManager;
 struct FOnAttributeChangeData;
+
 
 UCLASS()
 class PROJECT_MECHA_API AEnemyMecha
@@ -103,6 +105,8 @@ protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UI", meta = (AllowPrivateAccess = "true"))
     UWidgetComponent* EnemyHUDWidgetComp;    // ★ 추가
 
+    UPROPERTY()
+    AMissionManager* MissionManager = nullptr;
 protected:
     virtual void BeginPlay() override;
 
