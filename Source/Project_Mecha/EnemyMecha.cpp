@@ -42,6 +42,8 @@ AEnemyMecha::AEnemyMecha()
     MeleeRange = 200.f;
     RangedRange = 1500.f;
     PatrolRadius = 800.f;
+    LeashDistance = 5000.f;
+
 
     // 발사 소켓 기본값
     FireSocketName = TEXT("FireSocket");

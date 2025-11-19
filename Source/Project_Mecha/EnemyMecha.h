@@ -93,6 +93,9 @@ protected:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "AI", meta = (AllowPrivateAccess = "true"))
     float PatrolRadius;
 
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "AI", meta = (AllowPrivateAccess = "true"))
+    float LeashDistance;
+
     // 이 적이 사용할 Behavior Tree 에셋
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AI", meta = (AllowPrivateAccess = "true"))
     UBehaviorTree* BehaviorTreeAsset;
@@ -151,6 +154,9 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "Enemy|AI")
     FVector GetHomeLocation() const { return HomeLocation; }
+
+    UFUNCTION(BlueprintCallable, Category = "Enemy|AI")
+    float GetLeashDistance() const { return LeashDistance; }
 
     //  필요하면 BP에서 다시 InitAttributesEffect를 적용하고 싶을 때 사용
     UFUNCTION(BlueprintCallable, Category = "Enemy|Attributes")
