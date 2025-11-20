@@ -93,7 +93,7 @@ public:
 
 	// 호버 시작 시 상승 임펄스.
 	UPROPERTY(EditDefaultsOnly, Category = "Hover|Movement")
-	float HoverLiftImpulse = 1500.f;
+	float HoverLiftImpulse = 1800.f;
 
 	// ===== Energy (에너지) =====
 

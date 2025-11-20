@@ -211,7 +211,7 @@ void UGA_Hover::StartHover()
 			HoverAscendTimer,
 			this,
 			&UGA_Hover::ApplyHoverLift,
-			0.05f,
+			0.03f,
 			true
 		);
 	}
@@ -323,8 +323,8 @@ void UGA_Hover::ApplyHoverLift()
 
 	// 천천히 상승 (너무 빠르면 불안정해짐)
 	FVector CurrentVel = Move->Velocity;
-	float MaxUpSpeed = 400.f; // 상승 최대 속도
-	float LiftForce = 200.f;  // 가속치
+	float MaxUpSpeed = 800.f; // 상승 최대 속도
+	float LiftForce = 600.f;  // 가속치
 
 	if (CurrentVel.Z < MaxUpSpeed)
 	{
