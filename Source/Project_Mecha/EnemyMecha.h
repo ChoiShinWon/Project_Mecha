@@ -81,28 +81,31 @@ protected:
     TSubclassOf<UGameplayEffect> InitAttributesEffect;
 
     // === AI 파라미터 ===
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "AI", meta = (AllowPrivateAccess = "true"))
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")
     float AggroRadius;
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "AI", meta = (AllowPrivateAccess = "true"))
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "AI")
     float MeleeRange;
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "AI", meta = (AllowPrivateAccess = "true"))
-    float RangedRange;
-
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "AI", meta = (AllowPrivateAccess = "true"))
-    float PatrolRadius;
-
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "AI", meta = (AllowPrivateAccess = "true"))
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")
     float LeashDistance;
 
+    // 스폰된 위치 (패트롤 기준점)
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI")
+    FVector HomeLocation;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "AI")
+    float RangedRange;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "AI")
+    float PatrolRadius;
+
+
     // 이 적이 사용할 Behavior Tree 에셋
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AI", meta = (AllowPrivateAccess = "true"))
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AI")
     UBehaviorTree* BehaviorTreeAsset;
 
-    // 스폰된 위치 (패트롤 기준점)
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI", meta = (AllowPrivateAccess = "true"))
-    FVector HomeLocation;
+
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Death|Montage")
     UAnimMontage* DeathMontage;
@@ -145,6 +148,9 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "Enemy|AI")
     float GetMeleeRange() const { return MeleeRange; }
+
+    UFUNCTION(BlueprintCallable, Category = "Enemy|AI")
+    float GetAttackRange() const { return RangedRange; }
 
     UFUNCTION(BlueprintCallable, Category = "Enemy|AI")
     float GetRangedRange() const { return RangedRange; }
