@@ -160,17 +160,18 @@ void UGA_Hover::EndAbility(
 // - BrakingFrictionFactor, GroundFriction을 0으로 설정 (미끄러운 움직임).
 // - Flying 모드로 전환하고, 지상에 있으면 상승 임펄스 적용.
 // - 주기적으로 상승 보정 함수 호출 (ApplyHoverLift).
+//
+// Starts hover: Switches to Flying mode, applies lift impulse.
+// - Saves current movement settings (for restoration on end).
+// - Adds State.Hovering tag.
+// - Sets BrakingFrictionFactor, GroundFriction to 0 (slippery movement).
+// - Switches to Flying mode, applies lift impulse if on ground.
+// - Periodically calls lift adjustment function (ApplyHoverLift).
 void UGA_Hover::StartHover()
 {
 	if (!OwnerCharacter) return;
 	auto* Move = OwnerCharacter->GetCharacterMovement();
 	if (!Move) return;
-
-	//  캐릭터 플래그 세팅
-	if (AMechaCharacterBase* Mecha = Cast<AMechaCharacterBase>(OwnerCharacter))
-	{
-		Mecha->SetHovering(true);
-	}
 
 	SavedGravityScale = Move->GravityScale;
 	SavedBrakingFrictionFactor = Move->BrakingFrictionFactor;
@@ -213,7 +214,7 @@ void UGA_Hover::StartHover()
 			&UGA_Hover::ApplyHoverLift,
 			0.05f,
 			true
-		);
+		); 
 	}
 }
 
@@ -234,13 +235,6 @@ void UGA_Hover::StopHover(bool bFromEnergyDepleted)
 		Move->BrakingFrictionFactor = SavedBrakingFrictionFactor;
 		Move->GroundFriction = SavedGroundFriction;
 	}
-
-	// 캐릭터 플래그 해제
-	if (AMechaCharacterBase* Mecha = Cast<AMechaCharacterBase>(OwnerCharacter))
-	{
-		Mecha->SetHovering(false);
-	}
-
 	if (ASC) ASC->RemoveLooseGameplayTag(Tag_StateHovering);
 	if (bFromEnergyDepleted) ApplyOverheat();
 	if (UWorld* World = GetWorld())
@@ -248,7 +242,6 @@ void UGA_Hover::StopHover(bool bFromEnergyDepleted)
 		World->GetTimerManager().ClearTimer(HoverAscendTimer);
 	}
 }
-
 
 void UGA_Hover::ApplyDrainGE()
 {

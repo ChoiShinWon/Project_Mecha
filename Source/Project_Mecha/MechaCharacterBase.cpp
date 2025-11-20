@@ -38,7 +38,7 @@ AMechaCharacterBase::AMechaCharacterBase()
     Move->RotationRate = FRotator(0.f, 720.f, 0.f);
     Move->MaxWalkSpeed = 300.f;
     Move->JumpZVelocity = 600.f;
-    Move->AirControl = 0.4f;
+    Move->AirControl = 0.35f;
 
     // GAS
     AbilitySystem = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystem"));
@@ -65,8 +65,8 @@ void AMechaCharacterBase::Tick(float DeltaSeconds)
         BaseMove->MaxWalkSpeed = BaseSpeed * Multiplier;
     }
 
-    // Hovering 강제 유지 - "지금 Hovering인가?"는 bIsHovering만 믿는다
-    if (bIsHovering)
+    // Hovering 강제 유지
+    if (AbilitySystem && AbilitySystem->HasMatchingGameplayTag(FGameplayTag::RequestGameplayTag(TEXT("State.Hovering"))))
     {
         if (auto* Move = GetCharacterMovement())
         {
@@ -76,14 +76,13 @@ void AMechaCharacterBase::Tick(float DeltaSeconds)
                 Move->GravityScale = 0.05f;
             }
 
-            if (AbilitySystem && AbilitySystem->HasMatchingGameplayTag(Tag_Boosting))
+            if (AbilitySystem->HasMatchingGameplayTag(FGameplayTag::RequestGameplayTag(TEXT("State.Boosting"))))
             {
                 Move->Velocity.Z = FMath::Max(Move->Velocity.Z, 100.f);
             }
         }
     }
 }
-
 
 void AMechaCharacterBase::BeginPlay()
 {
@@ -195,7 +194,6 @@ void AMechaCharacterBase::InitASCOnce()
     // Cache tags
     Tag_Boosting = FGameplayTag::RequestGameplayTag(TEXT("State.Boosting"));
     Tag_Overheated = FGameplayTag::RequestGameplayTag(TEXT("State.Overheated"));
-    Tag_StateHovering = FGameplayTag::RequestGameplayTag(TEXT("State.Hovering"));
 
     // DefaultOwnedTags
     if (DefaultOwnedTags.Num() > 0)
@@ -258,7 +256,7 @@ void AMechaCharacterBase::OnEnergyChanged(const FOnAttributeChangeData& Data)
     }
 }
 
-// ----------------------------플레이어 입력 모두 이곳에서 처리--------------------------------------
+// -------- Input handlers --------
 void AMechaCharacterBase::Input_Move(const FInputActionValue& Value)
 {
     const FVector2D Axis = Value.Get<FVector2D>();
@@ -366,6 +364,7 @@ void AMechaCharacterBase::OnMovementModeChanged(EMovementMode PrevMovementMode, 
 
     if (!AbilitySystem) return;
 
+    static const FGameplayTag Tag_StateHovering = FGameplayTag::RequestGameplayTag(TEXT("State.Hovering"));
     if (AbilitySystem->HasMatchingGameplayTag(Tag_StateHovering))
     {
         if (auto* CM = GetCharacterMovement())
@@ -432,15 +431,6 @@ void AMechaCharacterBase::Input_Reload_Pressed()
 {
     if (AbilitySystem)
         AbilitySystem->AbilityLocalInputPressed((int32)EMechaAbilityInputID::Reload);
-}
-
-// -------------------------------------------------------------------------------------------------
-
-
-
-void AMechaCharacterBase::SetHovering(bool bNewHover)
-{
-    bIsHovering = bNewHover;
 }
 
 // === Health 연동 ===

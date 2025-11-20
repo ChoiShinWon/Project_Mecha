@@ -4,6 +4,11 @@
 // - 입력을 누르고 있는 동안 Flying 모드로 전환하여 공중에 떠 있게 한다.
 // - 에너지를 지속적으로 소모하며, 에너지가 0이 되면 과열 상태로 전환된다.
 //
+// Description:
+// - Hovering (aerial floating) ability class.
+// - Switches to Flying mode while input is held, allowing character to float in air.
+// - Continuously drains energy; triggers overheating when energy reaches 0.
+
 #pragma once
 
 #include "CoreMinimal.h"
@@ -11,9 +16,7 @@
 #include "GameplayTagContainer.h"
 #include "AbilitySystemComponent.h"
 #include "GameplayAbilitySpec.h"
-#include "MechaCharacterBase.h" 
 #include "GA_Hover.generated.h"
-
 
 class UAbilitySystemComponent;
 class UGameplayEffect;

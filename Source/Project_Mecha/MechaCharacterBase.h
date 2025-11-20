@@ -113,12 +113,6 @@ public:
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon")
     USceneComponent* MuzzleLocation;
 
-    // === Hover 상태 플래그 접근 ===
-    UFUNCTION(BlueprintCallable, Category = "Hover")
-    void SetHovering(bool bNewHover);
-
-    UFUNCTION(BlueprintPure, Category = "Hover")
-    bool IsHovering() const { return bIsHovering; }
 
 protected:
     UPROPERTY(EditDefaultsOnly, Category = "GAS")
@@ -131,8 +125,6 @@ protected:
 
     // 에너지 재생
     UPROPERTY() FActiveGameplayEffectHandle EnergyRegenEffectHandle;
-
-
 
     // UI
     UPROPERTY(EditDefaultsOnly, Category = "UI")
@@ -173,14 +165,10 @@ private:
     // Cached tags
     FGameplayTag Tag_Boosting;
     FGameplayTag Tag_Overheated;
-    FGameplayTag Tag_StateHovering;
 
     // QuickBoost 튜닝
     UPROPERTY(EditDefaultsOnly, Category = "QuickBoost") float LaunchXY = 1500.f;
     UPROPERTY(EditDefaultsOnly, Category = "QuickBoost") float LaunchZ = 200.f;
-
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Hover", meta = (AllowPrivateAccess = "true"))
-    bool bIsHovering = false;
 
     // Overheat
     FTimerHandle Timer_OverheatClear;
