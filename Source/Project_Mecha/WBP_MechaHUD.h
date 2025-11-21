@@ -110,13 +110,13 @@ protected:
     float WarningThreshold = 0.3f;     // 30~60%: 경고
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI|Energy")
-    FLinearColor ColorHigh = FLinearColor(0.25f, 0.9f, 1.f, 1.f);
+    FLinearColor ColorHigh = FLinearColor(0.0f, 0.9f, 0.1f, 1.f);
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI|Energy")
-    FLinearColor ColorMid = FLinearColor(1.f, 0.7f, 0.2f, 1.f);
+    FLinearColor ColorMid = FLinearColor(1.0f, 0.7f, 0.0f, 1.f);
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI|Energy")
-    FLinearColor ColorLow = FLinearColor(1.f, 0.25f, 0.25f, 1.f);
+    FLinearColor ColorLow = FLinearColor(0.9f, 0.05f, 0.05f, 1.f);
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI|Health")
     float HealthCautionThreshold = 0.6f;   // 60% 이상: 초록
