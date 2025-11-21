@@ -3,9 +3,7 @@
 // - UGA_MissleFire 클래스의 구현부.
 // - 미사일 순차 발사, 적 탐지, 유도 미사일 설정, 데미지 GE 초기화.
 //
-// Description:
-// - Implementation of UGA_MissleFire class.
-// - Sequential missile firing, enemy detection, homing missile setup, damage GE initialization.
+
 
 #include "GA_MissleFire.h"
 
@@ -18,26 +16,28 @@
 #include "TimerManager.h"
 #include "Engine/World.h"
 #include "EnemyAirship.h"
+#include "AbilitySystemComponent.h"
 
 // 생성자: Instancing Policy 및 Net Execution Policy 설정.
-// Constructor: Sets Instancing Policy and Net Execution Policy.
 UGA_MissleFire::UGA_MissleFire()
 {
     InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
     NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::LocalPredicted;
+
+    // [Cooldown] 쿨타임 태그 설정
+    Tag_CooldownMissile = FGameplayTag::RequestGameplayTag(TEXT("Cooldown.MissileFire"));
+
+    // 이 태그가 붙어 있으면 능력 발동 불가
+    ActivationBlockedTags.AddTag(Tag_CooldownMissile);
 }
+
 
 // Ability 활성화 로직: 순차적으로 미사일 발사.
 // - CommitAbility로 코스트/쿨다운 체크.
 // - 서버 권한에서만 실행.
 // - NumProjectiles 개수만큼 순차적으로 타이머 설정하여 SpawnMissle 호출.
 // - 모든 미사일 발사 후 능력 종료.
-//
-// Ability activation logic: Fires missiles sequentially.
-// - Checks cost/cooldown via CommitAbility.
-// - Only executes on server authority.
-// - Sets timers to call SpawnMissle sequentially for NumProjectiles count.
-// - Ends ability after all missiles are fired.
+
 void UGA_MissleFire::ActivateAbility(
     const FGameplayAbilitySpecHandle Handle,
     const FGameplayAbilityActorInfo* ActorInfo,
@@ -86,7 +86,11 @@ void UGA_MissleFire::ActivateAbility(
         TotalTime,
         false
     );
+
+    // 🔹 발동 성공했으니 쿨타임 태그 적용
+    ApplyMissileCooldown(Handle, ActorInfo, ActivationInfo);
 }
+
 
 void UGA_MissleFire::SpawnMissle(int32 /*Index*/, ACharacter* OwnerChar)
 {
@@ -130,17 +134,14 @@ void UGA_MissleFire::SpawnMissle(int32 /*Index*/, ACharacter* OwnerChar)
     Missle->SetActorEnableCollision(true);
     Missle->SetActorTickEnabled(true);
 
-    // �� �����ڿ� ��� �浹�ؼ� ���ߴ� ���� ����
     if (UPrimitiveComponent* Prim = Cast<UPrimitiveComponent>(Missle->GetRootComponent()))
     {
         Prim->IgnoreActorWhenMoving(OwnerChar, true);
     }
 
-    // �� �������� �����̰ԡ� ���� ��ġ + �ʱ� �ӵ� ����
     const FVector LaunchDir = SpawnRot.Vector();
     UProjectileMovementComponent* Move = ForceMakeMovableAndLaunch(Missle, LaunchDir);
 
-    // �� Ÿ�� ������ Homing ���� (Launch ���Ŀ� �ٿ��� OK)
     if (Target && Move)
     {
         Move->bIsHomingProjectile = true;
@@ -154,12 +155,6 @@ void UGA_MissleFire::SpawnMissle(int32 /*Index*/, ACharacter* OwnerChar)
 }
 
 // 가장 가까운 적 선택 함수.
-// - Owner가 적이면 플레이어를 타겟으로 반환.
-// - Owner가 플레이어면 MaxLockDistance 내의 가장 가까운 EnemyAirship 반환.
-//
-// Picks nearest enemy.
-// - Returns player as target if Owner is enemy.
-// - Returns nearest EnemyAirship within MaxLockDistance if Owner is player.
 AActor* UGA_MissleFire::PickBestTarget(const AActor* Owner) const
 {
     if (!Owner) return nullptr;
@@ -173,8 +168,6 @@ AActor* UGA_MissleFire::PickBestTarget(const AActor* Owner) const
         return UGameplayStatics::GetPlayerPawn(World, 0);
     }
 
-    // "Enemy" 태그를 가진 모든 액터를 검색 (EnemyMecha, EnemyAirship 등 모두 포함)
-    // Search all actors with "Enemy" tag (includes EnemyMecha, EnemyAirship, etc.)
     TArray<AActor*> AllActors;
     UGameplayStatics::GetAllActorsOfClass(World, AActor::StaticClass(), AllActors);
 
@@ -238,7 +231,6 @@ UProjectileMovementComponent* UGA_MissleFire::ForceMakeMovableAndLaunch(AActor* 
 {
     if (!Missle) return nullptr;
 
-    // 0) ��Ʈ�� Primitive�� �ƴϸ�, �浹 ������ Sphere�� ����� ��Ʈ�� �°�
     UPrimitiveComponent* RootPrim = Cast<UPrimitiveComponent>(Missle->GetRootComponent());
     if (!RootPrim)
     {
@@ -265,7 +257,6 @@ UProjectileMovementComponent* UGA_MissleFire::ForceMakeMovableAndLaunch(AActor* 
         RootPrim->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
     }
 
-    // 1) ProjectileMovement�� ������ ����
     UProjectileMovementComponent* Move = Missle->FindComponentByClass<UProjectileMovementComponent>();
     if (!Move)
     {
@@ -273,17 +264,55 @@ UProjectileMovementComponent* UGA_MissleFire::ForceMakeMovableAndLaunch(AActor* 
         Move->RegisterComponent();
     }
 
-    // 2) UpdatedComponent ���� + �⺻ �Ķ���� ����
     Move->SetUpdatedComponent(RootPrim);
-    Move->ProjectileGravityScale = 0.f;     // �߷����� ó������ ���� ����
+    Move->ProjectileGravityScale = 0.f;
     Move->InitialSpeed = FMath::Max(Move->InitialSpeed, InitialLaunchSpeed);
     Move->MaxSpeed = FMath::Max(Move->MaxSpeed, Move->InitialSpeed);
     Move->bRotationFollowsVelocity = true;
-    Move->bInitialVelocityInLocalSpace = false; // ���� �������� ���
+    Move->bInitialVelocityInLocalSpace = false;
 
-    // 3) �ʱ� �ӵ� ���� + Ȱ��ȭ
     Move->Velocity = LaunchDir.GetSafeNormal() * Move->InitialSpeed;
     Move->Activate(true);
 
     return Move;
+}
+
+// ================== [Cooldown] 쿨타임 적용 ==================
+
+// ================== [Cooldown] 미사일 쿨타임 태그 적용 ==================
+
+void UGA_MissleFire::ApplyMissileCooldown(
+    const FGameplayAbilitySpecHandle Handle,
+    const FGameplayAbilityActorInfo* ActorInfo,
+    const FGameplayAbilityActivationInfo ActivationInfo)
+{
+    if (!ActorInfo) return;
+
+    UAbilitySystemComponent* ASC = ActorInfo->AbilitySystemComponent.Get();
+    if (!ASC) return;
+
+    // 이미 쿨타임 태그가 붙어 있으면 중복 적용 안 함
+    if (ASC->HasMatchingGameplayTag(Tag_CooldownMissile))
+        return;
+
+    // 1) 쿨타임 태그 부여
+    ASC->AddLooseGameplayTag(Tag_CooldownMissile);
+
+    // 2) 일정 시간이 지나면 태그 제거 (쿨타임 해제)
+    AActor* OwnerActor = Cast<AActor>(ActorInfo->AvatarActor.Get());
+    if (!OwnerActor) return;
+
+    FTimerHandle CooldownTimerHandle;
+    TWeakObjectPtr<UAbilitySystemComponent> WeakASC(ASC);
+
+    OwnerActor->GetWorldTimerManager().SetTimer(
+        CooldownTimerHandle,
+        FTimerDelegate::CreateLambda([WeakASC, this]()
+            {
+                if (!WeakASC.IsValid()) return;
+                WeakASC->RemoveLooseGameplayTag(Tag_CooldownMissile);
+            }),
+        CooldownDuration,
+        false
+    );
 }

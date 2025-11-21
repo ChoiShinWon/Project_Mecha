@@ -572,7 +572,11 @@ AActor* AMechaCharacterBase::FindLockOnTarget()
     if (!World) return nullptr;
 
     FVector MyLocation = GetActorLocation();
-    FVector Forward = GetActorForwardVector();
+
+    FRotator ViewRot = Controller ? Controller->GetControlRotation() : GetActorRotation();
+    // Yaw만 쓰고 위/아래는 무시 (위/아래는 이미 피치 제한에서 처리)
+    FRotator YawRot(0.f, ViewRot.Yaw, 0.f);
+    FVector Forward = YawRot.Vector();
 
     TArray<AActor*> Candidates;
     UGameplayStatics::GetAllActorsOfClass(World, AEnemyMecha::StaticClass(), Candidates);

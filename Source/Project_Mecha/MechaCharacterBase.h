@@ -227,10 +227,10 @@ private:
 
     // 피치 제한
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LockOn", meta = (AllowPrivateAccess = "true"))
-    float LockOnPitchMin = -20.0f;
+    float LockOnPitchMin = -60.0f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LockOn", meta = (AllowPrivateAccess = "true"))
-    float LockOnPitchMax = 30.0f;
+    float LockOnPitchMax = 60.0f;
 
     // 타겟 탐색 거리/시야각
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LockOn", meta = (AllowPrivateAccess = "true"))
