@@ -469,7 +469,7 @@ void AMechaCharacterBase::Input_Reload_Pressed()
         AbilitySystem->AbilityLocalInputPressed((int32)EMechaAbilityInputID::Reload);
 }
 
-// 🔹 락온 입력 핸들러
+//  락온 입력 핸들러
 void AMechaCharacterBase::Input_LockOnToggle(const FInputActionValue& /*Value*/)
 {
     ToggleLockOn();

@@ -214,7 +214,7 @@ private:
     void Input_SprintStop(const FInputActionValue& Value);
     void Input_BoostMode_Pressed(const FInputActionValue& Value);
 
-    // 🔹 Lock-On 상태
+    //  Lock-On 상태
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LockOn", meta = (AllowPrivateAccess = "true"))
     bool bIsLockedOn = false;
 
