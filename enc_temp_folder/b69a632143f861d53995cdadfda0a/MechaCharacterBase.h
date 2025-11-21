@@ -88,7 +88,7 @@ protected:
     UPROPERTY(EditDefaultsOnly, Category = "Input") UInputAction* IA_GunFire;
     UPROPERTY(EditDefaultsOnly, Category = "Input") UInputAction* IA_Reload;
 
-    //  락온 입력 액션 (마우스 휠 버튼)
+    // 🔹 락온 입력 액션 (마우스 휠 버튼)
     UPROPERTY(EditDefaultsOnly, Category = "Input")
     UInputAction* IA_LockOn;
 
@@ -107,7 +107,7 @@ protected:
     UFUNCTION() void Input_GunFire_Released();
     UFUNCTION() void Input_Reload_Pressed();
 
-    //  락온 토글 입력
+    // 🔹 락온 토글 입력
     UFUNCTION() void Input_LockOnToggle(const FInputActionValue& Value);
 
 public:

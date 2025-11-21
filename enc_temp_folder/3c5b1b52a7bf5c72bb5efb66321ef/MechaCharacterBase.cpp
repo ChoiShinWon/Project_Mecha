@@ -515,7 +515,7 @@ float AMechaCharacterBase::GetMaxHealth() const
 }
 
 // ====================================
-//  Lock-On 구현부
+// 🔹 Lock-On 구현부
 // ====================================
 
 void AMechaCharacterBase::ToggleLockOn()
