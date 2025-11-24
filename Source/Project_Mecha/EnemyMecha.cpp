@@ -81,13 +81,15 @@ void AEnemyMecha::BeginPlay()
                 );
             }
 
-            //  Dash 어빌리티 등록 ===
+            //  Dash 어빌리티 등록 
             if (DashAbilityClass_Enemy)
             {
                 AbilitySystem->GiveAbility(
                     FGameplayAbilitySpec(DashAbilityClass_Enemy, 1, 1)
                 );
             }
+
+          
 
             // 미션 매니저 찾기
             if (MissionManager == nullptr)
@@ -367,3 +369,4 @@ void AEnemyMecha::FireDashAbility()
 
     AbilitySystem->TryActivateAbilityByClass(DashAbilityClass_Enemy);
 }
+

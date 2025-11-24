@@ -167,4 +167,5 @@ public:
     //  필요하면 BP에서 다시 InitAttributesEffect를 적용하고 싶을 때 사용
     UFUNCTION(BlueprintCallable, Category = "Enemy|Attributes")
     void ReInitializeAttributes();
+
 };
