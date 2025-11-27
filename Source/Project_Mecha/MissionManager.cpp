@@ -7,14 +7,16 @@
 AMissionManager::AMissionManager()
 {
     PrimaryActorTick.bCanEverTick = false;
-    bReplicates = true;   // ★ 반드시 켜라
+
+    // 멀티까지 당장 안 볼 거면 굳이 켤 필요 없음
+    // 나중에 확장할 생각이면 bReplicates = true; 유지해도 큰 문제는 없다.
+    // bReplicates = true;
 }
-
-
 
 void AMissionManager::StartMission()
 {
-    // 서버에서만 미션 시작
+    // 서버만 따질 거면 HasAuthority 체크 유지,
+    // 완전 싱글이면 이 if 문 통째로 지워도 된다.
     if (!HasAuthority())
     {
         return;
@@ -22,10 +24,15 @@ void AMissionManager::StartMission()
 
     CurrentKillCount = 0;
     bMissionActive = true;
-    MissionStartTime = GetWorld()->GetTimeSeconds();
+    bBossPhaseStarted = false;
+    bBossDefeated = false;
+    BossInstance = nullptr;
 
-    // 서버 → 전체에게 전달
-    Multicast_OnMissionStarted(RequiredKillCount);
+    MissionStartTime = GetWorld()->GetTimeSeconds();
+    MissionEndTime = 0.f;
+
+    // 그냥 로컬에서 바로 BP 이벤트 호출
+    OnMissionStartedBP(RequiredKillCount);
 }
 
 void AMissionManager::NotifyEnemyKilled(AEnemyMecha* KilledEnemy)
@@ -37,31 +44,57 @@ void AMissionManager::NotifyEnemyKilled(AEnemyMecha* KilledEnemy)
 
     ++CurrentKillCount;
 
-    Multicast_OnMissionProgress(CurrentKillCount, RequiredKillCount);
+    OnMissionProgressBP(CurrentKillCount, RequiredKillCount);
 
-    if (CurrentKillCount >= RequiredKillCount)
+    if (CurrentKillCount >= RequiredKillCount && !bBossPhaseStarted)
     {
-        bMissionActive = false;
-        MissionEndTime = GetWorld()->GetTimeSeconds();
-
-        Multicast_OnMissionCleared();
+        StartBossPhase();
     }
 }
 
-// === Multicast 구현부 ===
-
-void AMissionManager::Multicast_OnMissionStarted_Implementation(int32 InRequiredKillCount)
+void AMissionManager::StartBossPhase()
 {
-    // 서버 + 모든 클라에서 다 실행
-    OnMissionStartedBP(InRequiredKillCount);
+    if (!HasAuthority())
+    {
+        return;
+    }
+
+    if (bBossPhaseStarted)
+    {
+        return;
+    }
+
+    bBossPhaseStarted = true;
+
+    // 여기서는 "보스 페이즈 시작" 신호만 BP로 넘긴다.
+    OnBossPhaseStartedBP();
 }
 
-void AMissionManager::Multicast_OnMissionProgress_Implementation(int32 InCurrentKillCount, int32 InRequiredKillCount)
-{
-    OnMissionProgressBP(InCurrentKillCount, InRequiredKillCount);
-}
 
-void AMissionManager::Multicast_OnMissionCleared_Implementation()
+
+// 보스가 죽었을 때 Boss 쪽(EnemyMecha / BP_BossCrunch)에서 호출
+void AMissionManager::NotifyBossDefeated(AEnemyMecha* DefeatedBoss)
 {
+    if (!HasAuthority())
+    {
+        return;
+    }
+
+    // 다른 Enemy가 잘못 호출하는 거 방지
+    if (DefeatedBoss != BossInstance)
+    {
+        return;
+    }
+
+    if (bBossDefeated)
+    {
+        return;
+    }
+
+    bBossDefeated = true;
+    bMissionActive = false;
+    MissionEndTime = GetWorld()->GetTimeSeconds();
+
+    // 여기서 진짜 최종 미션 클리어 (랭크 화면/결과 화면으로 연결)
     OnMissionClearedBP();
 }
