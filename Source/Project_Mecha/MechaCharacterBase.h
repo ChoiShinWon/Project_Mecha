@@ -1,4 +1,6 @@
-﻿#pragma once
+﻿// MechaCharacterBase.h
+
+#pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
@@ -20,6 +22,7 @@ class UGameplayEffect;
 class UGameplayAbility;
 class UWBP_MechaHUD;
 class USceneComponent;
+class UAnimMontage;
 struct FOnAttributeChangeData;
 
 UENUM(BlueprintType)
@@ -34,6 +37,15 @@ enum class EMechaAbilityInputID : uint8
     AssaultBoost = 5,
     GunFire = 6,
     Reload = 7
+};
+
+UENUM(BlueprintType)
+enum class EHitReactDirection : uint8
+{
+    Front UMETA(DisplayName = "Front"),
+    Back  UMETA(DisplayName = "Back"),
+    Left  UMETA(DisplayName = "Left"),
+    Right UMETA(DisplayName = "Right")
 };
 
 UCLASS()
@@ -128,6 +140,14 @@ public:
 
     UFUNCTION(BlueprintPure, Category = "Hover")
     bool IsHovering() const { return bIsHovering; }
+
+    // === Hit React ===
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "HitReact")
+    UAnimMontage* HitReactMontage;
+
+    /** 공격자 월드 위치를 넘기면 앞/뒤/좌/우 방향 섹션 재생 */
+    UFUNCTION(BlueprintCallable, Category = "HitReact")
+    void PlayHitReactFromDirection(const FVector& AttackWorldLocation);
 
 protected:
     UPROPERTY(EditDefaultsOnly, Category = "GAS")

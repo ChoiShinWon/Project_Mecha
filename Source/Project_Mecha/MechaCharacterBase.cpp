@@ -1,4 +1,6 @@
-﻿#include "MechaCharacterBase.h"
+﻿// MechaCharacterBase.cpp
+
+#include "MechaCharacterBase.h"
 
 #include "AbilitySystemComponent.h"
 #include "MechaAttributeSet.h"
@@ -18,6 +20,8 @@
 #include "MissionManager.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "Animation/AnimInstance.h"
+#include "Animation/AnimMontage.h"
 
 // 🔹 락온 타겟용 적 클래스
 #include "EnemyMecha.h"
@@ -635,4 +639,77 @@ void AMechaCharacterBase::UpdateLockOnView(float DeltaTime)
     const FRotator NewRot = FMath::RInterpTo(CurrentRot, DesiredRot, DeltaTime, LockOnTurnSpeed);
 
     Controller->SetControlRotation(NewRot);
+}
+
+// ====================================
+//  Hit React 구현부
+// ====================================
+
+void AMechaCharacterBase::PlayHitReactFromDirection(const FVector& AttackWorldLocation)
+{
+    if (!HitReactMontage || !GetMesh())
+    {
+        return;
+    }
+
+    // 1) 내 위치 기준 공격자 방향 벡터 계산 (XY 평면만 사용)
+    const FVector MyLocation = GetActorLocation();
+    FVector ToAttacker = AttackWorldLocation - MyLocation;
+    ToAttacker.Z = 0.f;
+
+    if (!ToAttacker.Normalize())
+    {
+        // 같은 위치거나 방향 계산 불가
+        return;
+    }
+
+    const FVector Forward = GetActorForwardVector();
+    const FVector Right = GetActorRightVector();
+
+    const float ForwardDot = FVector::DotProduct(Forward, ToAttacker);
+    const float RightDot = FVector::DotProduct(Right, ToAttacker);
+
+    FName SectionName = NAME_None;
+
+    // 2) 앞/뒤 우선 판정
+    const float FrontBackThreshold = 0.7f; // 코사인 값 기준 (약 ±45도)
+    if (ForwardDot > FrontBackThreshold)
+    {
+        SectionName = FName("Front");
+    }
+    else if (ForwardDot < -FrontBackThreshold)
+    {
+        SectionName = FName("Back");
+    }
+    else
+    {
+        // 앞/뒤가 아니면 좌/우로 분류
+        if (RightDot >= 0.f)
+        {
+            SectionName = FName("Right");
+        }
+        else
+        {
+            SectionName = FName("Left");
+        }
+    }
+
+    if (SectionName.IsNone())
+    {
+        return;
+    }
+
+    // 3) 몽타주 재생 + 섹션 점프
+    if (UAnimInstance* Anim = GetMesh()->GetAnimInstance())
+    {
+        // 이미 이 몽타주가 재생 중이 아니면 먼저 Play
+        if (!Anim->Montage_IsPlaying(HitReactMontage))
+        {
+            Anim->Montage_Play(HitReactMontage, 1.f);
+        }
+
+        Anim->Montage_JumpToSection(SectionName, HitReactMontage);
+
+        UE_LOG(LogTemp, Verbose, TEXT("HitReact: Section %s"), *SectionName.ToString());
+    }
 }

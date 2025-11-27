@@ -13,8 +13,7 @@ AMissionManager::AMissionManager()
     // bReplicates = true;
 }
 
-void AMissionManager::StartMission()
-{
+void AMissionManager::StartMission(){
     // 서버만 따질 거면 HasAuthority 체크 유지,
     // 완전 싱글이면 이 if 문 통째로 지워도 된다.
     if (!HasAuthority())
