@@ -68,6 +68,16 @@ public:
     UPROPERTY(BlueprintReadWrite, Category = "Dash")
     bool bDashOnCooldown = false;   // true면 아직 다음 Dash 못씀
 
+    // 호버링 능력 클래스 (GA_Hover)
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Abilities")
+    TSubclassOf<UGameplayAbility> HoverAbilityClass;
+
+    UFUNCTION(BlueprintCallable, Category = "Abilities")
+    void ActivateHoverAbility();
+
+    UFUNCTION(BlueprintCallable, Category = "Abilities")
+    void DeactivateHoverAbility();
+
 protected:
 
     // 플레이어와 같은 AttributeSet 사용 (Health, MaxHealth 등)
