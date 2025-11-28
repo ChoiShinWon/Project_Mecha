@@ -13,12 +13,10 @@ class UGameplayEffect;
 class UBehaviorTree;
 class UGameplayAbility;
 class UEnemyHUDWidget;
-class UWidgetComponent;              
+class UWidgetComponent;
 class AMissionManager;
+class UAnimMontage;
 struct FOnAttributeChangeData;
-
-
-
 
 UCLASS()
 class PROJECT_MECHA_API AEnemyMecha
@@ -100,22 +98,35 @@ protected:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "AI")
     float PatrolRadius;
 
-
     // 이 적이 사용할 Behavior Tree 에셋
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AI")
     UBehaviorTree* BehaviorTreeAsset;
 
-
-
+    // === Death / HitReact 몽타주 ===
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Death|Montage")
     UAnimMontage* DeathMontage;
 
+    // 맞았을 때 재생할 HitReact 몽타주
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "HitReact")
+    UAnimMontage* HitReactMontage;
+
+    // HitReact 최소 간격 (초) – 너무 자주 안 튕기게
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "HitReact")
+    float HitReactInterval = 0.4f;
+
+    // 현재 HitReact를 재생할 수 있는 상태인지
+    bool bCanPlayHitReact = true;
+
+    // HitReact 간격 관리용 타이머
+    FTimerHandle TimerHandle_HitReactInterval;
+
     // === Enemy HUD 위젯 컴포넌트 ===
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UI", meta = (AllowPrivateAccess = "true"))
-    UWidgetComponent* EnemyHUDWidgetComp;    // 
+    UWidgetComponent* EnemyHUDWidgetComp;
 
     UPROPERTY()
     AMissionManager* MissionManager = nullptr;
+
 protected:
     virtual void BeginPlay() override;
 
@@ -131,6 +142,10 @@ protected:
     void OnHealthChanged(const FOnAttributeChangeData& Data);
 
     void HandleDeath();
+
+    // HitReact 쿨타임 리셋
+    UFUNCTION()
+    void ResetHitReactWindow();
 
 public:
     // === Getter 함수들 ===
@@ -168,4 +183,7 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Enemy|Attributes")
     void ReInitializeAttributes();
 
+    // === HitReact 재생 함수 (Projectile에서 호출) ===
+    UFUNCTION(BlueprintCallable, Category = "Enemy|HitReact")
+    void PlayHitReact();
 };

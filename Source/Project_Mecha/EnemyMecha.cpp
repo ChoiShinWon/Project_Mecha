@@ -20,9 +20,10 @@
 #include "MissionManager.h"
 #include "Kismet/GameplayStatics.h"
 
-#include "Components/WidgetComponent.h"   // 
-#include "EnemyHUDWidget.h"              //  (UEnemyHUDWidget)
-#include "Blueprint/UserWidget.h"        // 
+#include "Components/WidgetComponent.h"
+#include "EnemyHUDWidget.h"
+#include "Blueprint/UserWidget.h"
+#include "Animation/AnimInstance.h"
 
 AEnemyMecha::AEnemyMecha()
 {
@@ -44,18 +45,21 @@ AEnemyMecha::AEnemyMecha()
     PatrolRadius = 800.f;
     LeashDistance = 5000.f;
 
-
     // 발사 소켓 기본값
     FireSocketName = TEXT("FireSocket");
 
     // === Enemy HUD 위젯 컴포넌트 생성 ===
-    EnemyHUDWidgetComp = CreateDefaultSubobject<UWidgetComponent>(TEXT("EnemyHUDWidgetComp"));   // ★ 추가
+    EnemyHUDWidgetComp = CreateDefaultSubobject<UWidgetComponent>(TEXT("EnemyHUDWidgetComp"));
     EnemyHUDWidgetComp->SetupAttachment(GetRootComponent());
 
     // 머리 위 정도로 위치
     EnemyHUDWidgetComp->SetRelativeLocation(FVector(0.f, 0.f, 200.f));
     EnemyHUDWidgetComp->SetWidgetSpace(EWidgetSpace::Screen);
     EnemyHUDWidgetComp->SetDrawSize(FVector2D(200.f, 40.f));
+
+    // HitReact 기본값
+    HitReactInterval = 0.4f;
+    bCanPlayHitReact = true;
 }
 
 UAbilitySystemComponent* AEnemyMecha::GetAbilitySystemComponent() const
@@ -81,15 +85,13 @@ void AEnemyMecha::BeginPlay()
                 );
             }
 
-            //  Dash 어빌리티 등록 
+            // Dash 어빌리티 등록
             if (DashAbilityClass_Enemy)
             {
                 AbilitySystem->GiveAbility(
                     FGameplayAbilitySpec(DashAbilityClass_Enemy, 1, 1)
                 );
             }
-
-          
 
             // 미션 매니저 찾기
             if (MissionManager == nullptr)
@@ -106,6 +108,7 @@ void AEnemyMecha::BeginPlay()
                 }
             }
 
+            // 서버에서 HUD Init
             if (EnemyHUDWidgetComp && AbilitySystem && AttributeSet)
             {
                 UUserWidget* WidgetObject = EnemyHUDWidgetComp->GetUserWidgetObject();
@@ -132,7 +135,7 @@ void AEnemyMecha::BeginPlay()
             .AddUObject(this, &AEnemyMecha::OnHealthChanged);
     }
 
-    // === Enemy HUD InitWithASC 연결 ===   
+    // 클라이언트 포함 HUD Init
     if (EnemyHUDWidgetComp && AbilitySystem && AttributeSet)
     {
         UUserWidget* WidgetObject = EnemyHUDWidgetComp->GetUserWidgetObject();
@@ -227,7 +230,7 @@ void AEnemyMecha::HandleDeath()
         }
     }
 
-
+    // HUD 정리
     if (EnemyHUDWidgetComp)
     {
         if (UUserWidget* WidgetObject = EnemyHUDWidgetComp->GetUserWidgetObject())
@@ -239,6 +242,7 @@ void AEnemyMecha::HandleDeath()
         }
     }
 
+    // 미션 매니저에 킬 보고
     if (MissionManager)
     {
         MissionManager->NotifyEnemyKilled(this);
@@ -276,7 +280,7 @@ void AEnemyMecha::OnHealthChanged(const FOnAttributeChangeData& Data)
     {
         bIsDead = true;
 
-        // Dead 태그 추가
+        // Dead 태그 추가 (기존 유지)
         if (AbilitySystem)
         {
             AbilitySystem->AddLooseGameplayTag(
@@ -288,6 +292,46 @@ void AEnemyMecha::OnHealthChanged(const FOnAttributeChangeData& Data)
     }
 }
 
+// === HitReact 재생 (Projectile에서 직접 호출) ===
+void AEnemyMecha::PlayHitReact()
+{
+    // 죽었거나, 몽타주 없거나, 쿨타임 중이면 무시
+    if (bIsDead || !HitReactMontage || !bCanPlayHitReact)
+    {
+        return;
+    }
+
+    bCanPlayHitReact = false;
+
+    UAnimInstance* AnimInst = (GetMesh() ? GetMesh()->GetAnimInstance() : nullptr);
+    if (!AnimInst)
+    {
+        ResetHitReactWindow();
+        return;
+    }
+
+    // 이동 완전 정지는 하지 않는다. (AI가 계속 행동 가능)
+    // 필요하면 나중에 감속이나 특정 상황에서만 정지 추가.
+
+    AnimInst->Montage_Play(HitReactMontage, 1.0f);
+
+    // HitReactInterval 동안 추가 경직 막기
+    GetWorldTimerManager().ClearTimer(TimerHandle_HitReactInterval);
+    GetWorldTimerManager().SetTimer(
+        TimerHandle_HitReactInterval,
+        this,
+        &AEnemyMecha::ResetHitReactWindow,
+        HitReactInterval,
+        false
+    );
+}
+
+void AEnemyMecha::ResetHitReactWindow()
+{
+    bCanPlayHitReact = true;
+}
+
+// === Ability 호출들 ===
 
 void AEnemyMecha::FireMissileAbility()
 {
@@ -361,7 +405,7 @@ void AEnemyMecha::FireMissileFromNotify()
     }
 }
 
-//  Dash 발동 함수
+// Dash 발동 함수
 void AEnemyMecha::FireDashAbility()
 {
     if (!AbilitySystem || !DashAbilityClass_Enemy)
@@ -369,4 +413,3 @@ void AEnemyMecha::FireDashAbility()
 
     AbilitySystem->TryActivateAbilityByClass(DashAbilityClass_Enemy);
 }
-
