@@ -1,3 +1,6 @@
+// EnemyHUDWidget.cpp
+// ì  HUD ìœ„ì ¯ - ì²´ë ¥ë°” í‘œì‹œ, í”¼ê²© í”Œë˜ì‹œ, ì‚¬ë§ ì—°ì¶œ
+
 #include "EnemyHUDWidget.h"
 
 #include "AbilitySystemComponent.h"
@@ -8,119 +11,136 @@
 #include "TimerManager.h"
 #include "Engine/World.h"
 
+// ========================================
+// ASC ë° AttributeSet ì´ˆê¸°í™”
+// ========================================
 void UEnemyHUDWidget::InitWithASC(UAbilitySystemComponent* InASC, UMechaAttributeSet* InAttributes)
 {
-    ASC = InASC;
-    Attributes = InAttributes;
+	ASC = InASC;
+	Attributes = InAttributes;
 
-    // AttributeSetÀÌ ÀÖÀ¸¸é ÃÊ±â Ã¼·Â ÇÑ ¹ø ¼¼ÆÃ
-    if (Attributes)
-    {
-        const float CurrentHealth = Attributes->GetHealth();
-        const float MaxHealth = Attributes->GetMaxHealth();
-        ApplyHealth(CurrentHealth, MaxHealth);
-    }
+	// ì´ˆê¸° ì²´ë ¥ ë°” í‘œì‹œ
+	if (Attributes)
+	{
+		const float CurrentHealth = Attributes->GetHealth();
+		const float MaxHealth = Attributes->GetMaxHealth();
+		ApplyHealth(CurrentHealth, MaxHealth);
+	}
 }
 
+// ========================================
+// ì²´ë ¥ ì—…ë°ì´íŠ¸
+// ========================================
 void UEnemyHUDWidget::ApplyHealth(float NewHealth, float MaxHealth)
 {
-    UpdateHP(NewHealth, MaxHealth);
+	UpdateHP(NewHealth, MaxHealth);
 }
 
+// ========================================
+// ì²´ë ¥ë°” ê°±ì‹  ë° ìƒ‰ìƒ ë³€ê²½
+// ========================================
 void UEnemyHUDWidget::UpdateHP(float NewHealth, float MaxHealth)
 {
-    // === HP°¡ ÁÙ¾îµé¾úÀ¸¸é HitFlash Àç»ı ===
-    if (bHasLastHealth && NewHealth < LastHealth)
-    {
-        if (HitFlash)
-        {
-            PlayAnimation(HitFlash, 0.f, 1);   // ½ÃÀÛºÎÅÍ 1¹ø Àç»ı
-        }
-    }
+	// ========== í”¼ê²© í”Œë˜ì‹œ ì—°ì¶œ ==========
+	// ì²´ë ¥ì´ ì¤„ì–´ë“¤ì—ˆìœ¼ë©´ í”Œë˜ì‹œ ì• ë‹ˆë©”ì´ì…˜ ì¬ìƒ
+	if (bHasLastHealth && NewHealth < LastHealth)
+	{
+		if (HitFlash)
+		{
+			PlayAnimation(HitFlash, 0.f, 1);  // 1íšŒ ì¬ìƒ
+		}
+	}
 
-    // === HP Bar / »ö»ó ===
-    if (HPBar && MaxHealth > 0.f)
-    {
-        const float Percent = FMath::Clamp(NewHealth / MaxHealth, 0.f, 1.f);
-        HPBar->SetPercent(Percent);
+	// ========== ì²´ë ¥ë°” ì—…ë°ì´íŠ¸ ==========
+	if (HPBar && MaxHealth > 0.f)
+	{
+		const float Percent = FMath::Clamp(NewHealth / MaxHealth, 0.f, 1.f);
+		HPBar->SetPercent(Percent);
 
-        FLinearColor BarColor;
+		// ì²´ë ¥ ë¹„ìœ¨ì— ë”°ë¼ ìƒ‰ìƒ ë³€ê²½
+		FLinearColor BarColor;
 
-        if (Percent > 0.7f)
-        {
-            // 70% ÀÌ»ó: ÃÊ·Ï(¾ÈÀü)
-            BarColor = FLinearColor(0.1f, 0.8f, 0.1f);
-        }
-        else if (Percent > 0.3f)
-        {
-            // 30% ~ 70%: ÁÖÈ²(ÁÖÀÇ)
-            BarColor = FLinearColor(1.0f, 0.6f, 0.1f);
-        }
-        else
-        {
-            // 30% ¹Ì¸¸: »¡°­(À§Çè)
-            BarColor = FLinearColor(0.9f, 0.1f, 0.1f);
-        }
+		if (Percent > 0.7f)
+		{
+			// 70% ì´ìƒ: ì´ˆë¡ (ì•ˆì „)
+			BarColor = FLinearColor(0.1f, 0.8f, 0.1f);
+		}
+		else if (Percent > 0.3f)
+		{
+			// 30~70%: ì£¼í™© (ê²½ê³ )
+			BarColor = FLinearColor(1.0f, 0.6f, 0.1f);
+		}
+		else
+		{
+			// 30% ì´í•˜: ë¹¨ê°• (ìœ„í—˜)
+			BarColor = FLinearColor(0.9f, 0.1f, 0.1f);
+		}
 
-        HPBar->SetFillColorAndOpacity(BarColor);
-    }
+		HPBar->SetFillColorAndOpacity(BarColor);
+	}
 
-    // === ÅØ½ºÆ® °»½Å ===
-    if (HPText)
-    {
-        const int32 IntHealth = FMath::RoundToInt(NewHealth);
-        const int32 IntMax = FMath::RoundToInt(MaxHealth);
+	// ========== ì²´ë ¥ í…ìŠ¤íŠ¸ ì—…ë°ì´íŠ¸ ==========
+	if (HPText)
+	{
+		const int32 IntHealth = FMath::RoundToInt(NewHealth);
+		const int32 IntMax = FMath::RoundToInt(MaxHealth);
 
-        HPText->SetText(FText::FromString(
-            FString::Printf(TEXT("%d / %d"), IntHealth, IntMax)
-        ));
-    }
+		HPText->SetText(FText::FromString(
+			FString::Printf(TEXT("%d / %d"), IntHealth, IntMax)
+		));
+	}
 
-    // === ¸¶Áö¸· Ã¼·Â °»½Å ===
-    LastHealth = NewHealth;
-    bHasLastHealth = true;
+	// í˜„ì¬ ì²´ë ¥ ì €ì¥ (ë‹¤ìŒ ë¹„êµìš©)
+	LastHealth = NewHealth;
+	bHasLastHealth = true;
 }
 
+// ========================================
+// ìœ„ì ¯ ì¢…ë£Œ ì‹œ ì •ë¦¬
+// ========================================
 void UEnemyHUDWidget::NativeDestruct()
 {
-    // ÀÌÁ¦ µ¨¸®°ÔÀÌÆ® °°Àº °Ç ¾È ¾²´Ï±î ±×³É ºÎ¸ğ¸¸ È£Ãâ
-    Super::NativeDestruct();
+	Super::NativeDestruct();
 }
 
+// ========================================
+// ì‚¬ë§ ì‹œ í˜ì´ë“œì•„ì›ƒ ì—°ì¶œ
+// ========================================
 void UEnemyHUDWidget::OnOwnerDead()
 {
-    if (IsDesignTime())
-    {
-        return;
-    }
+	if (IsDesignTime())
+	{
+		return;
+	}
 
-    // DeathFade ¾Ö´Ï¸ŞÀÌ¼ÇÀÌ ÀÖÀ¸¸é Àç»ı
-    if (DeathFade)
-    {
-        PlayAnimation(DeathFade, 0.f, 1);
+	// ========== ì‚¬ë§ í˜ì´ë“œ ì• ë‹ˆë©”ì´ì…˜ ==========
+	if (DeathFade)
+	{
+		PlayAnimation(DeathFade, 0.f, 1);
 
-        const float Duration = DeathFade->GetEndTime();
+		const float Duration = DeathFade->GetEndTime();
 
-        if (Duration > 0.f)
-        {
-            FTimerHandle TimerHandle;
-            if (UWorld* World = GetWorld())
-            {
-                World->GetTimerManager().SetTimer(
-                    TimerHandle,
-                    [this]()
-                    {
-                        SetVisibility(ESlateVisibility::Collapsed);
-                    },
-                    Duration,
-                    false
-                );
-            }
-        }
-    }
-    else
-    {
-        // ¾Ö´Ï¸ŞÀÌ¼ÇÀÌ ¾øÀ¸¸é ¹Ù·Î ¼û±â±â
-        SetVisibility(ESlateVisibility::Collapsed);
-    }
+		// ì• ë‹ˆë©”ì´ì…˜ ì™„ë£Œ í›„ ìœ„ì ¯ ìˆ¨ê¸°ê¸°
+		if (Duration > 0.f)
+		{
+			FTimerHandle TimerHandle;
+			if (UWorld* World = GetWorld())
+			{
+				World->GetTimerManager().SetTimer(
+					TimerHandle,
+					[this]()
+					{
+						SetVisibility(ESlateVisibility::Collapsed);
+					},
+					Duration,
+					false
+				);
+			}
+		}
+	}
+	else
+	{
+		// ì• ë‹ˆë©”ì´ì…˜ ì—†ìœ¼ë©´ ì¦‰ì‹œ ìˆ¨ê¸°ê¸°
+		SetVisibility(ESlateVisibility::Collapsed);
+	}
 }

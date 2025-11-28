@@ -1,11 +1,5 @@
 ﻿// GA_Hover.cpp
-// 설명:
-// - UGA_Hover 클래스의 구현부.
-// - 호버링 시작/중지, 에너지 소모, 과열 처리 로직.
-//
-// Description:
-// - Implementation of UGA_Hover class.
-// - Hover start/stop, energy drain, overheating logic.
+// 호버링(공중 부유) 능력 - 에너지 소모, 과열 처리, Flying 모드 전환
 
 #include "GA_Hover.h"
 #include "AbilitySystemComponent.h"
@@ -17,67 +11,41 @@
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
-// 생성자: Instancing Policy 설정.
-// Constructor: Sets Instancing Policy.
+// ========================================
+// 생성자
+// ========================================
 UGA_Hover::UGA_Hover()
 {
+	// 액터마다 하나의 인스턴스만 생성
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
-	/*SetCanBeCanceled(true);
-
-	Tag_AbilityHover = FGameplayTag::RequestGameplayTag(TEXT("Ability.Hover"));
-	Tag_StateHovering = FGameplayTag::RequestGameplayTag(TEXT("State.Hovering"));
-	Tag_StateOverheat = FGameplayTag::RequestGameplayTag(TEXT("State.Overheat"));
-	Tag_BlockHover = FGameplayTag::RequestGameplayTag(TEXT("Block.Hover"));
-	Tag_CooldownHover = FGameplayTag::RequestGameplayTag(TEXT("Cooldown.Hover"));
-
-	ActivationBlockedTags.AddTag(Tag_BlockHover);
-	ActivationBlockedTags.AddTag(Tag_StateOverheat);
-	ActivationBlockedTags.AddTag(Tag_CooldownHover);
-	AbilityTags.AddTag(Tag_AbilityHover);*/
-	// GameplayCue 실행용 태그 추가
-
 }
 
-// 에너지가 충분한지 확인.
-// - ASC에서 Energy Attribute를 가져와 임계값과 비교.
-//
-// Checks if energy is sufficient.
-// - Gets Energy Attribute from ASC and compares with threshold.
+// ========================================
+// 에너지 충분 여부 확인
+// ========================================
 bool UGA_Hover::IsEnergySufficient(float Threshold) const
 {
 	if (!ASC) return false;
 	return ASC->GetNumericAttribute(UMechaAttributeSet::GetEnergyAttribute()) > Threshold;
 }
 
-
-
-// Ability 활성화 로직: 에너지 체크, 호버 시작, 에너지 소모 GE 적용.
-// - CommitAbility로 코스트/쿨다운 체크.
-// - 에너지가 충분하지 않으면 능력 종료.
-// - 에너지 변화 델리게이트 바인딩: 에너지가 0이 되면 자동 종료 및 과열 적용.
-// - StartHover 호출하여 Flying 모드 전환.
-// - ApplyDrainGE 호출하여 에너지 소모 시작.
-//
-// Ability activation logic: Checks energy, starts hover, applies energy drain GE.
-// - Checks cost/cooldown via CommitAbility.
-// - Ends ability if energy is insufficient.
-// - Binds energy change delegate: Auto-ends and applies overheating when energy reaches 0.
-// - Calls StartHover to switch to Flying mode.
-// - Calls ApplyDrainGE to start energy drain.
+// ========================================
+// 능력 활성화 - 호버링 시작
+// ========================================
 void UGA_Hover::ActivateAbility(
 	const FGameplayAbilitySpecHandle Handle,
 	const FGameplayAbilityActorInfo* ActorInfo,
 	const FGameplayAbilityActivationInfo ActivationInfo,
 	const FGameplayEventData* TriggerEventData)
 {
-
-
+	// 코스트/쿨다운 체크
 	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
 
+	// 오너 캐릭터 및 ASC 획득
 	OwnerCharacter = Cast<ACharacter>(ActorInfo->AvatarActor.Get());
 	ASC = GetAbilitySystemComponentFromActorInfo();
 	if (!OwnerCharacter || !ASC)
@@ -86,12 +54,15 @@ void UGA_Hover::ActivateAbility(
 		return;
 	}
 
+	// 에너지 부족하면 발동 실패
 	if (!IsEnergySufficient(MinEnergyToStart))
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
 
+	// ========== 에너지 변화 감지 델리게이트 바인딩 ==========
+	// 에너지가 0이 되면 자동으로 호버링 종료 및 과열 처리
 	if (ASC)
 	{
 		EnergyChangedHandle =
@@ -100,10 +71,11 @@ void UGA_Hover::ActivateAbility(
 				{
 					if (UGA_Hover* Self = WeakThis.Get())
 					{
+						// 에너지가 거의 0이 되면
 						if (Data.NewValue <= KINDA_SMALL_NUMBER && Self->IsActive())
 						{
 							Self->RemoveDrainGE();
-							Self->StopHover(true);
+							Self->StopHover(true);  // 과열 상태로 종료
 							Self->EndAbility(
 								Self->GetCurrentAbilitySpecHandle(),
 								Self->GetCurrentActorInfo(),
@@ -115,10 +87,14 @@ void UGA_Hover::ActivateAbility(
 				});
 	}
 
+	// 호버링 시작 및 에너지 소모 시작
 	StartHover();
 	ApplyDrainGE();
 }
 
+// ========================================
+// 입력 해제 - 호버링 수동 종료
+// ========================================
 void UGA_Hover::InputReleased(
 	const FGameplayAbilitySpecHandle Handle,
 	const FGameplayAbilityActorInfo* ActorInfo,
@@ -126,18 +102,23 @@ void UGA_Hover::InputReleased(
 {
 	if (!IsActive()) return;
 
+	// 에너지 소모 중단 및 호버링 종료
 	RemoveDrainGE();
-	StopHover(false);
+	StopHover(false);  // 정상 종료 (과열 아님)
 	EndAbility(GetCurrentAbilitySpecHandle(), GetCurrentActorInfo(), GetCurrentActivationInfo(),
 		true, false);
 }
 
+// ========================================
+// 능력 종료 - 정리 작업
+// ========================================
 void UGA_Hover::EndAbility(
 	const FGameplayAbilitySpecHandle Handle,
 	const FGameplayAbilityActorInfo* ActorInfo,
 	const FGameplayAbilityActivationInfo ActivationInfo,
 	bool bReplicateEndAbility, bool bWasCancelled)
 {
+	// 델리게이트 해제
 	if (ASC)
 	{
 		if (EnergyChangedHandle.IsValid())
@@ -147,49 +128,54 @@ void UGA_Hover::EndAbility(
 			EnergyChangedHandle.Reset();
 		}
 
+		// 호버링 상태 태그 제거
 		ASC->RemoveLooseGameplayTag(Tag_StateHovering);
 	}
+
 	RemoveDrainGE();
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }
 
-
-// 호버 시작: Flying 모드 전환, 상승 임펄스 적용.
-// - 현재 이동 설정을 저장 (종료 시 복원용).
-// - State.Hovering 태그 추가.
-// - BrakingFrictionFactor, GroundFriction을 0으로 설정 (미끄러운 움직임).
-// - Flying 모드로 전환하고, 지상에 있으면 상승 임펄스 적용.
-// - 주기적으로 상승 보정 함수 호출 (ApplyHoverLift).
+// ========================================
+// 호버링 시작 처리
+// ========================================
 void UGA_Hover::StartHover()
 {
 	if (!OwnerCharacter) return;
 	auto* Move = OwnerCharacter->GetCharacterMovement();
 	if (!Move) return;
 
-	//  캐릭터 플래그 세팅
+	// 캐릭터에 호버링 상태 플래그 설정
 	if (AMechaCharacterBase* Mecha = Cast<AMechaCharacterBase>(OwnerCharacter))
 	{
 		Mecha->SetHovering(true);
 	}
 
+	// ========== 현재 이동 설정 저장 (종료 시 복원용) ==========
 	SavedGravityScale = Move->GravityScale;
 	SavedBrakingFrictionFactor = Move->BrakingFrictionFactor;
 	SavedGroundFriction = Move->GroundFriction;
 
+	// 호버링 상태 태그 추가
 	if (ASC) ASC->AddLooseGameplayTag(Tag_StateHovering);
 
+	// ========== 이동 설정 조정 (미끄러운 공중 이동) ==========
 	Move->BrakingFrictionFactor = 0.f;
 	Move->GroundFriction = 0.f;
 
 	const bool bOnGround = Move->IsMovingOnGround();
 
+	// ========== Flying 모드 전환 ==========
 	if (bUseFlyingMode)
 	{
 		Move->SetMovementMode(MOVE_Flying);
+		
+		// 지상에 있으면 상승 임펄스 적용
 		if (bOnGround)
 		{
 			OwnerCharacter->LaunchCharacter(FVector(0, 0, HoverLiftImpulse), false, false);
 		}
+		// 공중에서 하강 중이면 속도 보정
 		else if (Move->Velocity.Z < 80.f)
 		{
 			Move->Velocity.Z = 80.f;
@@ -197,6 +183,7 @@ void UGA_Hover::StartHover()
 	}
 	else
 	{
+		// Flying 모드 사용 안 하는 경우 (낙하 + 중력 조정)
 		if (bOnGround)
 		{
 			Move->SetMovementMode(MOVE_Falling);
@@ -205,60 +192,80 @@ void UGA_Hover::StartHover()
 		Move->GravityScale = GravityScaleWhileHover;
 	}
 
+	// ========== 주기적 상승 보정 타이머 시작 ==========
 	if (UWorld* World = OwnerCharacter->GetWorld())
 	{
 		World->GetTimerManager().SetTimer(
 			HoverAscendTimer,
 			this,
 			&UGA_Hover::ApplyHoverLift,
-			0.03f,
-			true
+			0.03f,  // 0.03초마다 실행
+			true    // 반복
 		);
 	}
 }
 
+// ========================================
+// 호버링 종료 처리
+// ========================================
 void UGA_Hover::StopHover(bool bFromEnergyDepleted)
 {
 	auto* Move = OwnerCharacter ? OwnerCharacter->GetCharacterMovement() : nullptr;
 	if (Move)
 	{
+		// ========== 이동 모드 복원 ==========
 		if (bUseFlyingMode)
 		{
 			Move->SetMovementMode(MOVE_Falling);
-			Move->GravityScale = ExitFallGravityScale;
+			Move->GravityScale = ExitFallGravityScale;  // 낙하 시 중력
 		}
 		else
 		{
 			Move->GravityScale = SavedGravityScale;
 		}
+
+		// 저장된 이동 설정 복원
 		Move->BrakingFrictionFactor = SavedBrakingFrictionFactor;
 		Move->GroundFriction = SavedGroundFriction;
 	}
 
-	// 캐릭터 플래그 해제
+	// 캐릭터 호버링 플래그 해제
 	if (AMechaCharacterBase* Mecha = Cast<AMechaCharacterBase>(OwnerCharacter))
 	{
 		Mecha->SetHovering(false);
 	}
 
+	// 호버링 상태 태그 제거
 	if (ASC) ASC->RemoveLooseGameplayTag(Tag_StateHovering);
-	if (bFromEnergyDepleted) ApplyOverheat();
+
+	// 에너지 고갈로 종료된 경우 과열 처리
+	if (bFromEnergyDepleted) 
+		ApplyOverheat();
+
+	// 상승 보정 타이머 정리
 	if (UWorld* World = GetWorld())
 	{
 		World->GetTimerManager().ClearTimer(HoverAscendTimer);
 	}
 }
 
-
+// ========================================
+// 에너지 소모 효과 적용
+// ========================================
 void UGA_Hover::ApplyDrainGE()
 {
 	if (!ASC || !GE_Hover_EnergyDrain) return;
+	
+	// 에너지 소모 GE 적용
 	FGameplayEffectContextHandle Ctx = ASC->MakeEffectContext();
 	FGameplayEffectSpecHandle Spec = ASC->MakeOutgoingSpec(GE_Hover_EnergyDrain, GetAbilityLevel(), Ctx);
 	if (Spec.IsValid())
 		DrainGEHandle = ASC->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
 }
 
+// ========================================
+// 에너지 소모 효과 제거
+// ========================================
 void UGA_Hover::RemoveDrainGE()
 {
 	if (ASC && DrainGEHandle.IsValid())
@@ -268,16 +275,21 @@ void UGA_Hover::RemoveDrainGE()
 	}
 }
 
+// ========================================
+// 과열 상태 적용
+// ========================================
 void UGA_Hover::ApplyOverheat()
 {
 	if (!ASC) return;
 
-	ASC->AddLooseGameplayTag(Tag_StateOverheat);
-	ASC->AddLooseGameplayTag(Tag_CooldownHover);
-	ASC->AddLooseGameplayTag(Tag_BlockHover);
+	// 과열 관련 태그 추가
+	ASC->AddLooseGameplayTag(Tag_StateOverheat);   // 과열 상태
+	ASC->AddLooseGameplayTag(Tag_CooldownHover);   // 쿨다운
+	ASC->AddLooseGameplayTag(Tag_BlockHover);      // 호버 차단
 
 	TWeakObjectPtr<UAbilitySystemComponent> WeakASC = ASC;
 
+	// 일정 시간 후 과열 해제
 	if (UWorld* World = GetWorld())
 	{
 		FTimerHandle Handle;
@@ -290,30 +302,26 @@ void UGA_Hover::ApplyOverheat()
 				{
 					if (UAbilitySystemComponent* ASC_Local = WeakASC.Get())
 					{
+						// 모든 과열 태그 제거
 						ASC_Local->RemoveLooseGameplayTag(Tag_Overheat);
 						ASC_Local->RemoveLooseGameplayTag(Tag_Cooldown);
 						ASC_Local->RemoveLooseGameplayTag(Tag_Block);
 					}
 				}),
-			CooldownSeconds, false);
+			CooldownSeconds, 
+			false
+		);
 	}
 }
 
-
-// 호버 상승 보정 함수 (타이머에서 주기적 호출).
-// - 에너지가 충분할 때만 상승 보정 적용.
-// - Flying 모드일 때만 동작.
-// - Z축 속도를 점진적으로 증가시켜 천천히 상승.
-//
-// Hover lift adjustment function (called periodically by timer).
-// - Applies lift adjustment only when energy is sufficient.
-// - Only works in Flying mode.
-// - Gradually increases Z-axis velocity for slow ascent.
+// ========================================
+// 호버링 상승 보정 (주기적 호출)
+// ========================================
 void UGA_Hover::ApplyHoverLift()
 {
 	if (!OwnerCharacter || !ASC) return;
 
-	// 에너지가 충분할 때만 상승
+	// 에너지가 부족하면 상승 보정 안 함
 	if (!IsEnergySufficient(1.f))
 		return;
 
@@ -321,10 +329,10 @@ void UGA_Hover::ApplyHoverLift()
 	if (!Move || Move->MovementMode != MOVE_Flying)
 		return;
 
-	// 천천히 상승 (너무 빠르면 불안정해짐)
+	// ========== Z축 속도 점진적 증가 (천천히 상승) ==========
 	FVector CurrentVel = Move->Velocity;
-	float MaxUpSpeed = 800.f; // 상승 최대 속도
-	float LiftForce = 600.f;  // 가속치
+	float MaxUpSpeed = 800.f;  // 상승 최대 속도
+	float LiftForce = 600.f;   // 가속치
 
 	if (CurrentVel.Z < MaxUpSpeed)
 	{

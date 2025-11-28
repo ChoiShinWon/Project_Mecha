@@ -1,11 +1,5 @@
 ﻿// GA_Attack.cpp
-// 설명:
-// - UGA_Attack 클래스의 구현부.
-// - 근접 공격 판정 로직 (구체 스윕), GAS/엔진 데미지 적용, 히트 이펙트 재생.
-//
-// Description:
-// - Implementation of UGA_Attack class.
-// - Melee attack detection logic (sphere sweep), GAS/engine damage application, hit effect playback.
+// 근접 공격 능력 - 구체 스윕으로 적 탐지, GAS 데미지 적용
 
 #include "GA_Attack.h"
 #include "MechaCharacterBase.h"
@@ -19,138 +13,160 @@
 #include "Kismet/KismetSystemLibrary.h"
 #include "GameFramework/Controller.h"
 
-// 생성자: Instancing Policy, Net Execution Policy, Ability Tags 설정.
-// Constructor: Sets Instancing Policy, Net Execution Policy, and Ability Tags.
+// ========================================
+// 생성자
+// ========================================
 UGA_Attack::UGA_Attack()
 {
-    InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
-    NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::LocalPredicted;
-    AbilityTags.AddTag(FGameplayTag::RequestGameplayTag(TEXT("Ability.Attack")));
+	// 액터마다 하나의 인스턴스만 생성
+	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
+	
+	// 클라이언트에서 예측 실행, 서버에서 확정
+	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::LocalPredicted;
+	
+	// 공격 능력 태그 추가
+	AbilityTags.AddTag(FGameplayTag::RequestGameplayTag(TEXT("Ability.Attack")));
 }
 
-// Ability 활성화 로직: Blueprint 이벤트 OnAttackTriggered 호출.
-// - CommitAbility로 코스트/쿨다운 체크.
-// - OnAttackTriggered 이벤트를 BP에서 구현하여 몽타주 시작.
-//
-// Ability activation logic: Calls Blueprint event OnAttackTriggered.
-// - Checks cost/cooldown via CommitAbility.
-// - OnAttackTriggered event implemented in BP to start montage.
+// ========================================
+// 능력 활성화 - 공격 시작
+// ========================================
 void UGA_Attack::ActivateAbility(
-    const FGameplayAbilitySpecHandle Handle,
-    const FGameplayAbilityActorInfo* ActorInfo,
-    const FGameplayAbilityActivationInfo ActivationInfo,
-    const FGameplayEventData* TriggerEventData)
+	const FGameplayAbilitySpecHandle Handle,
+	const FGameplayAbilityActorInfo* ActorInfo,
+	const FGameplayAbilityActivationInfo ActivationInfo,
+	const FGameplayEventData* TriggerEventData)
 {
-    if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
-    {
-        EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-        return;
-    }
+	// 코스트/쿨다운 체크
+	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
+	{
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		return;
+	}
 
-    AMechaCharacterBase* Mecha = Cast<AMechaCharacterBase>(ActorInfo ? ActorInfo->AvatarActor.Get() : nullptr);
-    if (!Mecha)
-    {
-        EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-        return;
-    }
+	// 오너 캐릭터 획득
+	AMechaCharacterBase* Mecha = Cast<AMechaCharacterBase>(ActorInfo ? ActorInfo->AvatarActor.Get() : nullptr);
+	if (!Mecha)
+	{
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		return;
+	}
 
-    // BP(몽타주 시작/노티파이 등)로 트리거 넘김
-    OnAttackTriggered(Mecha);
+	// 블루프린트 이벤트 호출 (몽타주 시작, 애님 노티파이 등)
+	OnAttackTriggered(Mecha);
 }
 
+// ========================================
+// 능력 종료 - 정리 작업
+// ========================================
 void UGA_Attack::EndAbility(
-    const FGameplayAbilitySpecHandle Handle,
-    const FGameplayAbilityActorInfo* ActorInfo,
-    const FGameplayAbilityActivationInfo ActivationInfo,
-    bool bReplicateEndAbility, bool bWasCancelled)
+	const FGameplayAbilitySpecHandle Handle,
+	const FGameplayAbilityActorInfo* ActorInfo,
+	const FGameplayAbilityActivationInfo ActivationInfo,
+	bool bReplicateEndAbility, bool bWasCancelled)
 {
-    Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
+	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 
-    if (const UAbilitySystemComponent* ASC = ActorInfo ? ActorInfo->AbilitySystemComponent.Get() : nullptr)
-    {
-        // 필요 시 태그 정리 등
-    }
+	// 필요 시 태그 정리 등
+	if (const UAbilitySystemComponent* ASC = ActorInfo ? ActorInfo->AbilitySystemComponent.Get() : nullptr)
+	{
+		// 추가 정리 작업
+	}
 }
 
-// 공격 판정 함수: 구체 스윕으로 전방의 적을 감지하고 데미지 적용.
-// - 캐릭터 전방으로 구체 스윕 트레이스.
-// - 히트 시 ApplyDamage_GASOrEngine 호출하여 데미지 적용.
-// - 히트 이펙트 및 사운드 재생.
-//
-// Attack trace function: Detects enemies ahead via sphere sweep and applies damage.
-// - Sphere sweep trace forward from character.
-// - On hit, calls ApplyDamage_GASOrEngine to apply damage.
-// - Plays hit effect and sound.
+// ========================================
+// 공격 판정 실행 (애님 노티파이에서 호출)
+// ========================================
 void UGA_Attack::PerformAttackTrace(AActor* SourceActor)
 {
-    if (!SourceActor) return;
-    UWorld* World = SourceActor->GetWorld();
-    if (!World) return;
+	if (!SourceActor) return;
+	UWorld* World = SourceActor->GetWorld();
+	if (!World) return;
 
-    const FVector Start = SourceActor->GetActorLocation() + FVector(0, 0, 50);
-    const FVector End = Start + (SourceActor->GetActorForwardVector() * AttackRange);
+	// ========== 구체 스윕 트레이스 ==========
+	const FVector Start = SourceActor->GetActorLocation() + FVector(0, 0, 50);  // 캐릭터 중심에서 약간 위
+	const FVector End = Start + (SourceActor->GetActorForwardVector() * AttackRange);  // 전방으로
 
-    FHitResult Hit;
-    FCollisionQueryParams Params(SCENE_QUERY_STAT(GA_AttackTrace), false, SourceActor);
-    const bool bHit = World->SweepSingleByChannel(
-        Hit, Start, End, FQuat::Identity, ECC_Pawn,
-        FCollisionShape::MakeSphere(AttackRadius), Params);
+	FHitResult Hit;
+	FCollisionQueryParams Params(SCENE_QUERY_STAT(GA_AttackTrace), false, SourceActor);
+	
+	// 구체 스윕으로 적 탐지
+	const bool bHit = World->SweepSingleByChannel(
+		Hit, Start, End, FQuat::Identity, ECC_Pawn,
+		FCollisionShape::MakeSphere(AttackRadius), 
+		Params
+	);
 
-    if (!bHit || !Hit.GetActor())
-    {
-        UE_LOG(LogTemp, Verbose, TEXT("[GA_Attack] No hit"));
-        return;
-    }
+	// 히트 실패
+	if (!bHit || !Hit.GetActor())
+	{
+		UE_LOG(LogTemp, Verbose, TEXT("[GA_Attack] No hit"));
+		return;
+	}
 
-    AActor* HitActor = Hit.GetActor();
+	AActor* HitActor = Hit.GetActor();
 
-    // 데미지 적용 (GAS 우선, 폴백으로 엔진 Damage)
-    ApplyDamage_GASOrEngine(SourceActor, HitActor, Hit.ImpactPoint);
+	// ========== 데미지 적용 ==========
+	ApplyDamage_GASOrEngine(SourceActor, HitActor, Hit.ImpactPoint);
 
-    // 피드백
-    if (HitEffect) UGameplayStatics::SpawnEmitterAtLocation(World, HitEffect, Hit.ImpactPoint);
-    if (HitSound)  UGameplayStatics::PlaySoundAtLocation(World, HitSound, Hit.ImpactPoint);
+	// ========== 히트 피드백 ==========
+	// 히트 이펙트
+	if (HitEffect) 
+		UGameplayStatics::SpawnEmitterAtLocation(World, HitEffect, Hit.ImpactPoint);
+	
+	// 히트 사운드
+	if (HitSound)  
+		UGameplayStatics::PlaySoundAtLocation(World, HitSound, Hit.ImpactPoint);
 }
 
-// 대상 액터에 GAS 데미지를 우선 적용, ASC가 없으면 엔진 기본 데미지로 폴백.
-// - 대상의 ASC를 찾아 GE_MeleeDamage를 SetByCaller로 적용.
-// - ASC가 없으면 엔진 기본 ApplyDamage 사용.
-//
-// Applies GAS damage to target actor first, falls back to engine damage if no ASC.
-// - Finds target's ASC and applies GE_MeleeDamage via SetByCaller.
-// - Uses engine's ApplyDamage if no ASC.
+// ========================================
+// 데미지 적용 (GAS 우선, 폴백으로 엔진 데미지)
+// ========================================
 void UGA_Attack::ApplyDamage_GASOrEngine(AActor* SourceActor, AActor* HitActor, const FVector& HitPoint)
 {
-    if (!SourceActor || !HitActor) return;
+	if (!SourceActor || !HitActor) return;
 
-    // 1) 대상의 ASC 획득
-    UAbilitySystemComponent* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(HitActor);
-    UAbilitySystemComponent* SourceASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(SourceActor);
+	// ========== 1. GAS 데미지 적용 시도 ==========
+	UAbilitySystemComponent* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(HitActor);
+	UAbilitySystemComponent* SourceASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(SourceActor);
 
-    if (TargetASC && GE_MeleeDamage)
-    {
-        // SetByCaller로 전달할 스펙 생성
-        FGameplayEffectContextHandle Ctx = SourceASC ? SourceASC->MakeEffectContext() : FGameplayEffectContextHandle();
-        Ctx.AddSourceObject(SourceActor);
+	// 대상이 ASC를 가지고 있고, GE가 설정되어 있으면 GAS 데미지 적용
+	if (TargetASC && GE_MeleeDamage)
+	{
+		// GE 컨텍스트 생성
+		FGameplayEffectContextHandle Ctx = SourceASC ? SourceASC->MakeEffectContext() : FGameplayEffectContextHandle();
+		Ctx.AddSourceObject(SourceActor);
 
-        FGameplayEffectSpecHandle SpecHandle = (SourceASC ? SourceASC : TargetASC)->MakeOutgoingSpec(GE_MeleeDamage, 1.f, Ctx);
-        if (SpecHandle.IsValid())
-        {
-            // SetByCaller(Damage) = AttackDamage
-            SpecHandle.Data->SetSetByCallerMagnitude(FGameplayTag::RequestGameplayTag(*SetByCallerDamageName.ToString()), AttackDamage);
+		// GE Spec 생성
+		FGameplayEffectSpecHandle SpecHandle = (SourceASC ? SourceASC : TargetASC)->MakeOutgoingSpec(GE_MeleeDamage, 1.f, Ctx);
+		
+		if (SpecHandle.IsValid())
+		{
+			// SetByCaller로 데미지 값 전달
+			SpecHandle.Data->SetSetByCallerMagnitude(
+				FGameplayTag::RequestGameplayTag(*SetByCallerDamageName.ToString()), 
+				AttackDamage
+			);
 
-            // 대상에 적용
-            TargetASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
-            UE_LOG(LogTemp, Log, TEXT("[GA_Attack] Applied GAS Damage %.1f to %s"), AttackDamage, *HitActor->GetName());
-            return;
-        }
-    }
+			// 대상에게 GE 적용
+			TargetASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+			
+			UE_LOG(LogTemp, Log, TEXT("[GA_Attack] Applied GAS Damage %.1f to %s"), 
+				AttackDamage, *HitActor->GetName());
+			return;
+		}
+	}
 
-    // 2) 폴백: 엔진 기본 데미지
-    UGameplayStatics::ApplyDamage(
-        HitActor, AttackDamage,
-        SourceActor->GetInstigatorController(),
-        SourceActor, /*DamageTypeClass*/ nullptr);
+	// ========== 2. 폴백: 엔진 기본 데미지 ==========
+	// ASC가 없거나 GE가 설정되지 않은 경우
+	UGameplayStatics::ApplyDamage(
+		HitActor, 
+		AttackDamage,
+		SourceActor->GetInstigatorController(),
+		SourceActor, 
+		nullptr  // DamageTypeClass
+	);
 
-    UE_LOG(LogTemp, Log, TEXT("[GA_Attack] Fallback ApplyDamage %.1f to %s"), AttackDamage, *HitActor->GetName());
+	UE_LOG(LogTemp, Log, TEXT("[GA_Attack] Fallback ApplyDamage %.1f to %s"), 
+		AttackDamage, *HitActor->GetName());
 }

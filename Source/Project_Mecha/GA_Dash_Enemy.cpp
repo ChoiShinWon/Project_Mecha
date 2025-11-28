@@ -1,3 +1,6 @@
+// GA_Dash_Enemy.cpp
+// ì  ë©”ì¹´ ëŒ€ì‹œ ëŠ¥ë ¥ - íƒ€ê²Ÿì„ í–¥í•´ ë¹ ë¥´ê²Œ ëŒì§„
+
 #include "GA_Dash_Enemy.h"
 #include "EnemyMecha.h"
 
@@ -13,244 +16,273 @@
 #include "Animation/AnimInstance.h"
 #include "Engine/World.h"
 
+// ========================================
+// ìƒì„±ì
+// ========================================
 UGA_Dash_Enemy::UGA_Dash_Enemy()
 {
-    InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
-    NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::LocalPredicted;
+	// ì•¡í„°ë§ˆë‹¤ í•˜ë‚˜ì˜ ì¸ìŠ¤í„´ìŠ¤ë§Œ ìƒì„±
+	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
+	
+	// í´ë¼ì´ì–¸íŠ¸ì—ì„œ ì˜ˆì¸¡ ì‹¤í–‰, ì„œë²„ì—ì„œ í™•ì •
+	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::LocalPredicted;
 
-    Tag_AbilityDash = FGameplayTag::RequestGameplayTag(TEXT("Ability.Dash.Enemy"));
-    Tag_StateDashing = FGameplayTag::RequestGameplayTag(TEXT("State.Dashing"));
-    Tag_CooldownDash = FGameplayTag::RequestGameplayTag(TEXT("Cooldown.Dash"));
+	// ========== ê²Œì„í”Œë ˆì´ íƒœê·¸ ì´ˆê¸°í™” ==========
+	Tag_AbilityDash = FGameplayTag::RequestGameplayTag(TEXT("Ability.Dash.Enemy"));
+	Tag_StateDashing = FGameplayTag::RequestGameplayTag(TEXT("State.Dashing"));
+	Tag_CooldownDash = FGameplayTag::RequestGameplayTag(TEXT("Cooldown.Dash"));
 
-    AbilityTags.AddTag(Tag_AbilityDash);
-    ActivationOwnedTags.AddTag(Tag_StateDashing);
+	AbilityTags.AddTag(Tag_AbilityDash);
+	ActivationOwnedTags.AddTag(Tag_StateDashing);
 }
 
+// ========================================
+// Enemy ìºë¦­í„° íšë“
+// ========================================
 ACharacter* UGA_Dash_Enemy::GetEnemyCharacter(const FGameplayAbilityActorInfo* ActorInfo) const
 {
-    return Cast<ACharacter>(ActorInfo ? ActorInfo->AvatarActor.Get() : nullptr);
+	return Cast<ACharacter>(ActorInfo ? ActorInfo->AvatarActor.Get() : nullptr);
 }
 
+// ========================================
+// ëŒ€ì‹œ íƒ€ê²Ÿ íšë“
+// ========================================
 AActor* UGA_Dash_Enemy::GetDashTarget(ACharacter* EnemyChar) const
 {
-    if (!EnemyChar)
-        return nullptr;
+	if (!EnemyChar)
+		return nullptr;
 
-    AEnemyMecha* EnemyMecha = Cast<AEnemyMecha>(EnemyChar);
-    if (!EnemyMecha)
-        return nullptr;
+	AEnemyMecha* EnemyMecha = Cast<AEnemyMecha>(EnemyChar);
+	if (!EnemyMecha)
+		return nullptr;
 
-    // Missile°ú µ¿ÀÏÇÏ°Ô EnemyMecha°¡ µé°íÀÖ´Â Å¸°Ù »ç¿ë
-    return EnemyMecha->CurrentTarget;
+	// EnemyMechaì˜ CurrentTarget ì‚¬ìš©
+	return EnemyMecha->CurrentTarget;
 }
 
+// ========================================
+// ëŠ¥ë ¥ í™œì„±í™” - ëŒ€ì‹œ ì‹¤í–‰
+// ========================================
 void UGA_Dash_Enemy::ActivateAbility(
-    const FGameplayAbilitySpecHandle Handle,
-    const FGameplayAbilityActorInfo* ActorInfo,
-    const FGameplayAbilityActivationInfo ActivationInfo,
-    const FGameplayEventData* TriggerEventData)
+	const FGameplayAbilitySpecHandle Handle,
+	const FGameplayAbilityActorInfo* ActorInfo,
+	const FGameplayAbilityActivationInfo ActivationInfo,
+	const FGameplayEventData* TriggerEventData)
 {
-    if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
-    {
-        EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-        return;
-    }
+	// ì½”ìŠ¤íŠ¸/ì¿¨ë‹¤ìš´ ì²´í¬
+	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
+	{
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		return;
+	}
 
-    ACharacter* EnemyChar = GetEnemyCharacter(ActorInfo);
-    if (!EnemyChar)
-    {
-        EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-        return;
-    }
+	// Enemy ìºë¦­í„° íšë“
+	ACharacter* EnemyChar = GetEnemyCharacter(ActorInfo);
+	if (!EnemyChar)
+	{
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		return;
+	}
 
-    // EnemyMechaÀÇ CurrentTarget »ç¿ë
-    AActor* TargetActor = GetDashTarget(EnemyChar);
-    if (!TargetActor)
-    {
-        EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-        return;
-    }
+	// íƒ€ê²Ÿ í™•ì¸
+	AActor* TargetActor = GetDashTarget(EnemyChar);
+	if (!TargetActor)
+	{
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		return;
+	}
 
-    // ´ë½¬ ½ÃÀÛ Àü¿¡ AI MoveTo ²÷±â (¶Ò¶Ò ²÷±â´Â ¿øÀÎ Á¦°Å)
-    if (AAIController* AICon = Cast<AAIController>(EnemyChar->GetController()))
-    {
-        AICon->StopMovement();
-    }
+	// ========== AI ì´ë™ ëª…ë ¹ ì •ì§€ ==========
+	if (AAIController* AICon = Cast<AAIController>(EnemyChar->GetController()))
+	{
+		AICon->StopMovement();
+	}
 
-    // === ´ë½¬ µ¿¾È ºê·¹ÀÌÅ·/¸¶Âû ²ô±â (µî¼Ó µ¹Áø ´À³¦) ===
-    if (UCharacterMovementComponent* MoveComp = EnemyChar->GetCharacterMovement())
-    {
-        if (!bSavedMovementParams)
-        {
-            SavedBrakingFrictionFactor = MoveComp->BrakingFrictionFactor;
-            SavedBrakingDecelWalking = MoveComp->BrakingDecelerationWalking;
-            bSavedMovementParams = true;
-        }
+	// ========== ì´ë™ íŒŒë¼ë¯¸í„° ì €ì¥ ë° ì¡°ì • (ë¯¸ë„ëŸ¬ì§€ê²Œ) ==========
+	if (UCharacterMovementComponent* MoveComp = EnemyChar->GetCharacterMovement())
+	{
+		if (!bSavedMovementParams)
+		{
+			SavedBrakingFrictionFactor = MoveComp->BrakingFrictionFactor;
+			SavedBrakingDecelWalking = MoveComp->BrakingDecelerationWalking;
+			bSavedMovementParams = true;
+		}
 
-        MoveComp->BrakingFrictionFactor = 0.0f;
-        MoveComp->BrakingDecelerationWalking = 0.0f;
-    }
+		// ë¸Œë ˆì´í‚¹ ì œê±° (ë¯¸ë„ëŸ¬ì§€ëŠ” íš¨ê³¼)
+		MoveComp->BrakingFrictionFactor = 0.0f;
+		MoveComp->BrakingDecelerationWalking = 0.0f;
+	}
 
-    // === ¹æÇâ/°Å¸® °è»ê ===
-    FVector ToTarget = TargetActor->GetActorLocation() - EnemyChar->GetActorLocation();
-    ToTarget.Z = 0.0f;
+	// ========== ë°©í–¥ ë° ê±°ë¦¬ ê³„ì‚° ==========
+	FVector ToTarget = TargetActor->GetActorLocation() - EnemyChar->GetActorLocation();
+	ToTarget.Z = 0.0f;  // XY í‰ë©´ë§Œ ì‚¬ìš©
 
-    float Distance = ToTarget.Size();
-    if (Distance < KINDA_SMALL_NUMBER)
-    {
-        EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-        return;
-    }
+	float Distance = ToTarget.Size();
+	if (Distance < KINDA_SMALL_NUMBER)
+	{
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		return;
+	}
 
-    ToTarget.Normalize();
+	ToTarget.Normalize();
 
-    // ±âº»: Å¸°Ù±îÁö ÀüÃ¼ °Å¸®¿¡¼­ MinStopDistance ¸¸Å­Àº ³²±â°í ÀÌµ¿
-    float TravelDistance = FMath::Max(Distance - MinStopDistance, 0.0f);
+	// ========== ëŒ€ì‹œ ê±°ë¦¬ ê³„ì‚° ==========
+	// íƒ€ê²Ÿê¹Œì§€ ì „ì²´ ê±°ë¦¬ì—ì„œ MinStopDistanceë§Œí¼ ë¹¼ê³  ì´ë™
+	float TravelDistance = FMath::Max(Distance - MinStopDistance, 0.0f);
 
-    // DashSpeedMultiplier·Î ÀÌµ¿ °Å¸® °­È­
-    TravelDistance *= DashSpeedMultiplier;
+	// ì†ë„ ë°°ìˆ˜ ì ìš©
+	TravelDistance *= DashSpeedMultiplier;
 
-    // DashDistance¸¦ ÃÖ´ëÄ¡·Î »ç¿ë (0ÀÌ¸é ¹«Á¦ÇÑ)
-    if (DashDistance > 0.0f)
-    {
-        TravelDistance = FMath::Min(TravelDistance, DashDistance);
-    }
+	// ìµœëŒ€ ê±°ë¦¬ ì œí•œ (0ì´ë©´ ë¬´ì œí•œ)
+	if (DashDistance > 0.0f)
+	{
+		TravelDistance = FMath::Min(TravelDistance, DashDistance);
+	}
 
-    if (TravelDistance <= 0.0f)
-    {
-        EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-        return;
-    }
+	if (TravelDistance <= 0.0f)
+	{
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		return;
+	}
 
-    // DashDuration µ¿¾È TravelDistance¸¦ ÀÌµ¿ÇÏµµ·Ï ¼Óµµ °è»ê
-    const float Speed = (DashDuration > 0.f) ? (TravelDistance / DashDuration) : 0.f;
-    if (Speed <= 0.0f)
-    {
-        EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-        return;
-    }
+	// ========== ëŒ€ì‹œ ì†ë„ ê³„ì‚° ==========
+	// DashDuration ì‹œê°„ ë™ì•ˆ TravelDistanceë¥¼ ì´ë™í•˜ë„ë¡
+	const float Speed = (DashDuration > 0.f) ? (TravelDistance / DashDuration) : 0.f;
+	if (Speed <= 0.0f)
+	{
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		return;
+	}
 
-    const FVector LaunchVelocity = ToTarget * Speed;
+	const FVector LaunchVelocity = ToTarget * Speed;
 
-    // ½ÇÁ¦ ´ë½¬ (ÇÑ ¹ø¸¸ È£Ãâ)
-    EnemyChar->LaunchCharacter(LaunchVelocity, true, false);
+	// ========== ìºë¦­í„° ë°œì‚¬ (ëŒ€ì‹œ) ==========
+	EnemyChar->LaunchCharacter(LaunchVelocity, true, false);
 
-    // Dash ¸ùÅ¸ÁÖ Àç»ı (ÀÖÀ» ¶§¸¸)
-    if (DashMontage && EnemyChar->GetMesh())
-    {
-        if (UAnimInstance* AnimInst = EnemyChar->GetMesh()->GetAnimInstance())
-        {
-            // ÀÌ¹Ì Àç»ı ÁßÀÌ¸é ´Ù½Ã ½ÃÀÛÇÏÁö ¾Êµµ·Ï Ã¼Å©
-            if (!AnimInst->Montage_IsPlaying(DashMontage))
-            {
-                AnimInst->Montage_Play(DashMontage);
-            }
-        }
-    }
+	// ========== ëŒ€ì‹œ ì• ë‹ˆë©”ì´ì…˜ ì¬ìƒ ==========
+	if (DashMontage && EnemyChar->GetMesh())
+	{
+		if (UAnimInstance* AnimInst = EnemyChar->GetMesh()->GetAnimInstance())
+		{
+			// ì´ë¯¸ ì¬ìƒ ì¤‘ì´ ì•„ë‹ˆë©´ ì‹œì‘
+			if (!AnimInst->Montage_IsPlaying(DashMontage))
+			{
+				AnimInst->Montage_Play(DashMontage);
+			}
+		}
+	}
 
-    // ´ë½¬ ÄğÅ¸ÀÓ ÇÃ·¡±× (BTS_CheckDashDistance¿¡¼­ »ç¿ë)
-    if (AEnemyMecha* EnemyMecha = Cast<AEnemyMecha>(EnemyChar))
-    {
-        EnemyMecha->bDashOnCooldown = true;
-    }
+	// ========== ëŒ€ì‹œ ì¿¨íƒ€ì„ í”Œë˜ê·¸ ì„¤ì • ==========
+	if (AEnemyMecha* EnemyMecha = Cast<AEnemyMecha>(EnemyChar))
+	{
+		EnemyMecha->bDashOnCooldown = true;
+	}
 
-    // Äğ´Ù¿î ÀÌÆåÆ® (ÀÖÀ¸¸é)
-    if (DashCooldownEffectClass && ActorInfo && ActorInfo->AbilitySystemComponent.IsValid())
-    {
-        FGameplayEffectContextHandle Context =
-            ActorInfo->AbilitySystemComponent->MakeEffectContext();
+	// ========== ì¿¨ë‹¤ìš´ GE ì ìš© ==========
+	if (DashCooldownEffectClass && ActorInfo && ActorInfo->AbilitySystemComponent.IsValid())
+	{
+		FGameplayEffectContextHandle Context =
+			ActorInfo->AbilitySystemComponent->MakeEffectContext();
 
-        FGameplayEffectSpecHandle SpecHandle =
-            ActorInfo->AbilitySystemComponent->MakeOutgoingSpec(
-                DashCooldownEffectClass,
-                GetAbilityLevel(Handle, ActorInfo),
-                Context
-            );
+		FGameplayEffectSpecHandle SpecHandle =
+			ActorInfo->AbilitySystemComponent->MakeOutgoingSpec(
+				DashCooldownEffectClass,
+				GetAbilityLevel(Handle, ActorInfo),
+				Context
+			);
 
-        if (SpecHandle.IsValid())
-        {
-            ActorInfo->AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(
-                *SpecHandle.Data.Get()
-            );
-        }
-    }
+		if (SpecHandle.IsValid())
+		{
+			ActorInfo->AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(
+				*SpecHandle.Data.Get()
+			);
+		}
+	}
 
-    // DashDuration ÀÌÈÄ °­Á¦·Î Á¤Áö + EndAbility È£Ãâ
-    if (UWorld* World = EnemyChar->GetWorld())
-    {
-        World->GetTimerManager().SetTimer(
-            DashTimerHandle,
-            this,
-            &UGA_Dash_Enemy::StopDash,
-            DashDuration,
-            false
-        );
-    }
+	// ========== íƒ€ì´ë¨¸ë¡œ ëŒ€ì‹œ ì¢…ë£Œ ì˜ˆì•½ ==========
+	if (UWorld* World = EnemyChar->GetWorld())
+	{
+		World->GetTimerManager().SetTimer(
+			DashTimerHandle,
+			this,
+			&UGA_Dash_Enemy::StopDash,
+			DashDuration,
+			false
+		);
+	}
 }
 
+// ========================================
+// ëŒ€ì‹œ ì •ì§€ ë° ì •ë¦¬
+// ========================================
 void UGA_Dash_Enemy::StopDash()
 {
-    const FGameplayAbilityActorInfo* Info = GetCurrentActorInfo();
-    ACharacter* EnemyChar = GetEnemyCharacter(Info);
+	const FGameplayAbilityActorInfo* Info = GetCurrentActorInfo();
+	ACharacter* EnemyChar = GetEnemyCharacter(Info);
 
-    if (EnemyChar)
-    {
-        if (UCharacterMovementComponent* MoveComp = EnemyChar->GetCharacterMovement())
-        {
-            // ´ë½¬ ³¡³ª¸é ÀÌµ¿ ¸ØÃß°í
-            MoveComp->StopMovementImmediately();
+	if (EnemyChar)
+	{
+		// ========== ì´ë™ ì •ì§€ ==========
+		if (UCharacterMovementComponent* MoveComp = EnemyChar->GetCharacterMovement())
+		{
+			MoveComp->StopMovementImmediately();
 
-            // ºê·¹ÀÌÅ·/¸¶Âû ¿ø·¡ °ªÀ¸·Î º¹±¸
-            if (bSavedMovementParams)
-            {
-                MoveComp->BrakingFrictionFactor = SavedBrakingFrictionFactor;
-                MoveComp->BrakingDecelerationWalking = SavedBrakingDecelWalking;
-            }
-        }
+			// ì´ë™ íŒŒë¼ë¯¸í„° ë³µì›
+			if (bSavedMovementParams)
+			{
+				MoveComp->BrakingFrictionFactor = SavedBrakingFrictionFactor;
+				MoveComp->BrakingDecelerationWalking = SavedBrakingDecelWalking;
+			}
+		}
 
-        // IsDashing / ShouldDash ÇØÁ¦ (BT Çàµ¿ ´Ù½Ã Ç®¾îÁÖ±â)
-        if (AEnemyMecha* EnemyMecha = Cast<AEnemyMecha>(EnemyChar))
-        {
-            if (AAIController* AICon = Cast<AAIController>(EnemyMecha->GetController()))
-            {
-                if (UBlackboardComponent* BB = AICon->GetBlackboardComponent())
-                {
-                    BB->SetValueAsBool(TEXT("IsDashing"), false);
-                    BB->SetValueAsBool(TEXT("ShouldDash"), false);
-                }
-            }
-        }
+		// ========== ë¸”ë™ë³´ë“œ í”Œë˜ê·¸ ì´ˆê¸°í™” ==========
+		if (AEnemyMecha* EnemyMecha = Cast<AEnemyMecha>(EnemyChar))
+		{
+			if (AAIController* AICon = Cast<AAIController>(EnemyMecha->GetController()))
+			{
+				if (UBlackboardComponent* BB = AICon->GetBlackboardComponent())
+				{
+					BB->SetValueAsBool(TEXT("IsDashing"), false);
+					BB->SetValueAsBool(TEXT("ShouldDash"), false);
+				}
+			}
+		}
 
-        // ¸ùÅ¸ÁÖ Á¤¸® (ÀÖÀ¸¸é)
-        if (DashMontage && EnemyChar->GetMesh())
-        {
-            if (UAnimInstance* AnimInst = EnemyChar->GetMesh()->GetAnimInstance())
-            {
-                if (AnimInst->Montage_IsPlaying(DashMontage))
-                {
-                    AnimInst->Montage_Stop(0.2f, DashMontage);
-                }
-            }
-        }
-    }
+		// ========== ì• ë‹ˆë©”ì´ì…˜ ì •ì§€ ==========
+		if (DashMontage && EnemyChar->GetMesh())
+		{
+			if (UAnimInstance* AnimInst = EnemyChar->GetMesh()->GetAnimInstance())
+			{
+				if (AnimInst->Montage_IsPlaying(DashMontage))
+				{
+					AnimInst->Montage_Stop(0.2f, DashMontage);
+				}
+			}
+		}
+	}
 
-    FGameplayAbilitySpecHandle Handle = GetCurrentAbilitySpecHandle();
-    FGameplayAbilityActivationInfo ActInfo = GetCurrentActivationInfo();
+	// ëŠ¥ë ¥ ì¢…ë£Œ
+	FGameplayAbilitySpecHandle Handle = GetCurrentAbilitySpecHandle();
+	FGameplayAbilityActivationInfo ActInfo = GetCurrentActivationInfo();
 
-    EndAbility(Handle, Info, ActInfo, true, false);
+	EndAbility(Handle, Info, ActInfo, true, false);
 }
 
+// ========================================
+// ëŠ¥ë ¥ ì¢…ë£Œ - ì •ë¦¬ ì‘ì—…
+// ========================================
 void UGA_Dash_Enemy::EndAbility(
-    const FGameplayAbilitySpecHandle Handle,
-    const FGameplayAbilityActorInfo* ActorInfo,
-    const FGameplayAbilityActivationInfo ActivationInfo,
-    bool bReplicateEndAbility,
-    bool bWasCancelled)
+	const FGameplayAbilitySpecHandle Handle,
+	const FGameplayAbilityActorInfo* ActorInfo,
+	const FGameplayAbilityActivationInfo ActivationInfo,
+	bool bReplicateEndAbility,
+	bool bWasCancelled)
 {
-    if (UWorld* World = GetWorld())
-    {
-        World->GetTimerManager().ClearTimer(DashTimerHandle);
-    }
+	// íƒ€ì´ë¨¸ ì •ë¦¬
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().ClearTimer(DashTimerHandle);
+	}
 
-    Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
+	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }

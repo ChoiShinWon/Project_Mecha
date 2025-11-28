@@ -1,9 +1,5 @@
 // GA_MissleFire.cpp
-// 설명:
-// - UGA_MissleFire 클래스의 구현부.
-// - 미사일 순차 발사, 적 탐지, 유도 미사일 설정, 데미지 GE 초기화.
-//
-
+// 미사일 순차 발사, 적 탐지, 유도 미사일 설정, 데미지 적용을 담당하는 Gameplay Ability
 
 #include "GA_MissleFire.h"
 
@@ -18,348 +14,414 @@
 #include "EnemyAirship.h"
 #include "AbilitySystemComponent.h"
 
-// 생성자: Instancing Policy 및 Net Execution Policy 설정.
+// ========================================
+// 생성자
+// ========================================
 UGA_MissleFire::UGA_MissleFire()
 {
-    InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
-    NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::LocalPredicted;
+	// 액터마다 하나의 인스턴스만 생성
+	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
+	
+	// 클라이언트에서 예측 실행, 서버에서 확정
+	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::LocalPredicted;
 
-    // [Cooldown] 쿨타임 태그 설정
-    Tag_CooldownMissile = FGameplayTag::RequestGameplayTag(TEXT("Cooldown.MissileFire"));
-
-    // 이 태그가 붙어 있으면 능력 발동 불가
-    ActivationBlockedTags.AddTag(Tag_CooldownMissile);
+	// 쿨타임 태그 등록
+	Tag_CooldownMissile = FGameplayTag::RequestGameplayTag(TEXT("Cooldown.MissileFire"));
+	
+	// 쿨타임 태그가 있으면 능력 발동 차단
+	ActivationBlockedTags.AddTag(Tag_CooldownMissile);
 }
 
-
-// Ability 활성화 로직: 순차적으로 미사일 발사.
-// - CommitAbility로 코스트/쿨다운 체크.
-// - 서버 권한에서만 실행.
-// - NumProjectiles 개수만큼 순차적으로 타이머 설정하여 SpawnMissle 호출.
-// - 모든 미사일 발사 후 능력 종료.
-
+// ========================================
+// 능력 활성화 - 미사일 순차 발사 시작
+// ========================================
 void UGA_MissleFire::ActivateAbility(
-    const FGameplayAbilitySpecHandle Handle,
-    const FGameplayAbilityActorInfo* ActorInfo,
-    const FGameplayAbilityActivationInfo ActivationInfo,
-    const FGameplayEventData* TriggerEventData)
+	const FGameplayAbilitySpecHandle Handle,
+	const FGameplayAbilityActorInfo* ActorInfo,
+	const FGameplayAbilityActivationInfo ActivationInfo,
+	const FGameplayEventData* TriggerEventData)
 {
-    UE_LOG(LogTemp, Warning, TEXT("[GA_MissileFire] ActivateAbility CALLED"));
+	UE_LOG(LogTemp, Warning, TEXT("[GA_MissileFire] ActivateAbility CALLED"));
 
-    if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
-    {
-        UE_LOG(LogTemp, Warning, TEXT("[GA_MissileFire] CommitAbility FAILED"));
-        return;
-    }
+	// 코스트/쿨다운 체크
+	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[GA_MissileFire] CommitAbility FAILED"));
+		return;
+	}
 
-    UE_LOG(LogTemp, Warning, TEXT("[GA_MissileFire] CommitAbility SUCCESS"));
+	UE_LOG(LogTemp, Warning, TEXT("[GA_MissileFire] CommitAbility SUCCESS"));
 
-    ACharacter* OwnerChar = Cast<ACharacter>(ActorInfo ? ActorInfo->AvatarActor.Get() : nullptr);
-    if (!OwnerChar || !MissleProjectileClass)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("[GA_MissileFire] OwnerChar or MissleProjectileClass is NULL"));
-        EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-        return;
-    }
+	// 오너 캐릭터 유효성 검사
+	ACharacter* OwnerChar = Cast<ACharacter>(ActorInfo ? ActorInfo->AvatarActor.Get() : nullptr);
+	if (!OwnerChar || !MissleProjectileClass)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[GA_MissileFire] OwnerChar or MissleProjectileClass is NULL"));
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		return;
+	}
 
-    UE_LOG(LogTemp, Warning, TEXT("[GA_MissileFire] OwnerChar valid, HasAuthority=%s"), 
-        OwnerChar->HasAuthority() ? TEXT("TRUE") : TEXT("FALSE"));
+	UE_LOG(LogTemp, Warning, TEXT("[GA_MissileFire] OwnerChar valid, HasAuthority=%s"), 
+		OwnerChar->HasAuthority() ? TEXT("TRUE") : TEXT("FALSE"));
 
-    if (!OwnerChar->HasAuthority())
-    {
-        UE_LOG(LogTemp, Warning, TEXT("[GA_MissileFire] No Authority - EndAbility"));
-        EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
-        return;
-    }
+	// 서버에서만 미사일 스폰 실행
+	if (!OwnerChar->HasAuthority())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[GA_MissileFire] No Authority - EndAbility"));
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
+		return;
+	}
 
-    // 첫 미사일은 즉시 발사, 나머지는 타이머로
-    SpawnMissle(0, OwnerChar);
+	// 첫 번째 미사일은 즉시 발사
+	SpawnMissle(0, OwnerChar);
 
-    for (int32 i = 1; i < NumProjectiles; ++i)
-    {
-        FTimerHandle Th;
-        TWeakObjectPtr<UGA_MissleFire> WeakThis(this);
-        OwnerChar->GetWorldTimerManager().SetTimer(
-            Th,
-            FTimerDelegate::CreateLambda([WeakThis, OwnerChar, i]()
-                {
-                    if (!WeakThis.IsValid() || !OwnerChar) return;
-                    WeakThis->SpawnMissle(i, OwnerChar);
-                }),
-            i * TimeBetweenShots,
-            false
-        );
-    }
+	// 나머지 미사일들은 시간차를 두고 순차 발사
+	for (int32 i = 1; i < NumProjectiles; ++i)
+	{
+		FTimerHandle Th;
+		TWeakObjectPtr<UGA_MissleFire> WeakThis(this);
+		
+		// 타이머로 미사일 발사 예약
+		OwnerChar->GetWorldTimerManager().SetTimer(
+			Th,
+			FTimerDelegate::CreateLambda([WeakThis, OwnerChar, i]()
+				{
+					if (!WeakThis.IsValid() || !OwnerChar) return;
+					WeakThis->SpawnMissle(i, OwnerChar);
+				}),
+			i * TimeBetweenShots,  // 발사 간격
+			false
+		);
+	}
 
-    const float TotalTime = (NumProjectiles - 1) * TimeBetweenShots + 0.05f;
-    FTimerHandle EndTh;
-    OwnerChar->GetWorldTimerManager().SetTimer(
-        EndTh,
-        FTimerDelegate::CreateLambda([this, Handle, ActorInfo, ActivationInfo]()
-            {
-                if (IsActive()) EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
-            }),
-        TotalTime,
-        false
-    );
+	// 모든 미사일 발사 완료 후 능력 종료
+	const float TotalTime = (NumProjectiles - 1) * TimeBetweenShots + 0.05f;
+	FTimerHandle EndTh;
+	OwnerChar->GetWorldTimerManager().SetTimer(
+		EndTh,
+		FTimerDelegate::CreateLambda([this, Handle, ActorInfo, ActivationInfo]()
+			{
+				if (IsActive()) EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
+			}),
+		TotalTime,
+		false
+	);
 
-    // 🔹 발동 성공했으니 쿨타임 태그 적용
-    ApplyMissileCooldown(Handle, ActorInfo, ActivationInfo);
+	// 쿨타임 시작
+	ApplyMissileCooldown(Handle, ActorInfo, ActivationInfo);
 }
 
-
+// ========================================
+// 미사일 스폰 및 설정
+// ========================================
 void UGA_MissleFire::SpawnMissle(int32 Index, ACharacter* OwnerChar)
 {
-    UE_LOG(LogTemp, Warning, TEXT("[GA_MissileFire] SpawnMissle called - Index=%d, OwnerChar=%s"), 
-        Index, OwnerChar ? *OwnerChar->GetName() : TEXT("NULL"));
+	UE_LOG(LogTemp, Warning, TEXT("[GA_MissileFire] SpawnMissle called - Index=%d, OwnerChar=%s"), 
+		Index, OwnerChar ? *OwnerChar->GetName() : TEXT("NULL"));
 
-    if (!OwnerChar || !MissleProjectileClass)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("[GA_MissileFire] SpawnMissle FAILED - OwnerChar or MissleProjectileClass is NULL"));
-        return;
-    }
+	// 유효성 검사
+	if (!OwnerChar || !MissleProjectileClass)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[GA_MissileFire] SpawnMissle FAILED - OwnerChar or MissleProjectileClass is NULL"));
+		return;
+	}
 
-    AActor* Target = PickBestTarget(OwnerChar);
-    UE_LOG(LogTemp, Warning, TEXT("[GA_MissileFire] Target found: %s"), 
-        Target ? *Target->GetName() : TEXT("NULL"));
+	// 타겟 검색
+	AActor* Target = PickBestTarget(OwnerChar);
+	UE_LOG(LogTemp, Warning, TEXT("[GA_MissileFire] Target found: %s"), 
+		Target ? *Target->GetName() : TEXT("NULL"));
 
-    FVector  SpawnLoc;
-    FRotator SpawnRot;
+	FVector  SpawnLoc;
+	FRotator SpawnRot;
 
-    static const FName SocketName(TEXT("MissileSocket"));
-    if (USkeletalMeshComponent* Mesh = OwnerChar->GetMesh(); Mesh && Mesh->DoesSocketExist(SocketName))
-    {
-        SpawnLoc = Mesh->GetSocketLocation(SocketName);
-        SpawnRot = Mesh->GetSocketRotation(SocketName);
-        // 소켓 위치에서 추가로 앞쪽으로 오프셋 적용 (충돌 방지)
-        SpawnLoc += Mesh->GetSocketRotation(SocketName).Vector() * 80.f;
-    }
-    else
-    {
-        SpawnLoc = OwnerChar->GetActorLocation() + OwnerChar->GetActorForwardVector() * (SpawnOffset + 80.f) + FVector(0, 0, 50);
-        SpawnRot = OwnerChar->GetControlRotation();
-    }
+	// ========== 스폰 위치 계산 ==========
+	static const FName SocketName(TEXT("MissileSocket"));
+	if (USkeletalMeshComponent* Mesh = OwnerChar->GetMesh(); Mesh && Mesh->DoesSocketExist(SocketName))
+	{
+		// 소켓이 있으면 소켓 위치에서 스폰
+		SpawnLoc = Mesh->GetSocketLocation(SocketName);
+		SpawnRot = Mesh->GetSocketRotation(SocketName);
+		
+		// 캐릭터 충돌 방지를 위해 앞쪽으로 추가 오프셋
+		SpawnLoc += Mesh->GetSocketRotation(SocketName).Vector() * 80.f;
+	}
+	else
+	{
+		// 소켓이 없으면 캐릭터 앞쪽에 스폰
+		SpawnLoc = OwnerChar->GetActorLocation() + OwnerChar->GetActorForwardVector() * (SpawnOffset + 80.f) + FVector(0, 0, 50);
+		SpawnRot = OwnerChar->GetControlRotation();
+	}
 
-    if (Target)
-    {
-        const FVector Dir = (Target->GetActorLocation() - SpawnLoc).GetSafeNormal();
-        SpawnRot = Dir.Rotation();
-        SpawnRot.Yaw += FMath::RandRange(-SpreadAngle, SpreadAngle);
-        SpawnRot.Pitch += FMath::RandRange(-SpreadAngle, SpreadAngle);
-    }
+	// ========== 타겟 방향으로 회전 ==========
+	if (Target)
+	{
+		// 타겟 방향 계산
+		const FVector Dir = (Target->GetActorLocation() - SpawnLoc).GetSafeNormal();
+		SpawnRot = Dir.Rotation();
+		
+		// 랜덤 확산 적용
+		SpawnRot.Yaw += FMath::RandRange(-SpreadAngle, SpreadAngle);
+		SpawnRot.Pitch += FMath::RandRange(-SpreadAngle, SpreadAngle);
+	}
 
-    FActorSpawnParameters Params;
-    Params.Owner = OwnerChar;
-    Params.Instigator = OwnerChar;
-    Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+	// ========== 미사일 스폰 ==========
+	FActorSpawnParameters Params;
+	Params.Owner = OwnerChar;
+	Params.Instigator = OwnerChar;
+	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
 
-    AActor* Missle = OwnerChar->GetWorld()->SpawnActor<AActor>(MissleProjectileClass, SpawnLoc, SpawnRot, Params);
+	AActor* Missle = OwnerChar->GetWorld()->SpawnActor<AActor>(MissleProjectileClass, SpawnLoc, SpawnRot, Params);
 
+	UE_LOG(LogTemp, Warning,
+		TEXT("[GA_MissileFire] SpawnActor result = %s"),
+		Missle ? *Missle->GetName() : TEXT("NULL"));
 
-    UE_LOG(LogTemp, Warning,
-        TEXT("[GA_MissileFire] SpawnActor result = %s"),
-        Missle ? *Missle->GetName() : TEXT("NULL"));
+	if (!Missle) return;
 
-    if (!Missle) return;
+	// ========== 네트워크 설정 ==========
+	Missle->SetReplicates(true);
+	Missle->SetReplicateMovement(true);
+	Missle->SetActorEnableCollision(true);
+	Missle->SetActorTickEnabled(true);
 
-    Missle->SetReplicates(true);
-    Missle->SetReplicateMovement(true);
-    Missle->SetActorEnableCollision(true);
-    Missle->SetActorTickEnabled(true);
+	// ========== 충돌 무시 설정 (캐릭터와 충돌 방지) ==========
+	if (UPrimitiveComponent* MissilePrim = Cast<UPrimitiveComponent>(Missle->GetRootComponent()))
+	{
+		// 미사일이 오너를 무시
+		MissilePrim->IgnoreActorWhenMoving(OwnerChar, true);
+		MissilePrim->MoveIgnoreActors.AddUnique(OwnerChar);
+		
+		// 오너의 모든 컴포넌트와 상호 무시 (양방향)
+		TArray<UPrimitiveComponent*> OwnerPrims;
+		OwnerChar->GetComponents<UPrimitiveComponent>(OwnerPrims);
+		for (UPrimitiveComponent* OwnerPrim : OwnerPrims)
+		{
+			if (OwnerPrim)
+			{
+				MissilePrim->IgnoreComponentWhenMoving(OwnerPrim, true);
+				OwnerPrim->IgnoreComponentWhenMoving(MissilePrim, true);
+			}
+		}
+	}
 
-    // 미사일과 오너 캐릭터 간 충돌 완전 무시 (양방향)
-    if (UPrimitiveComponent* MissilePrim = Cast<UPrimitiveComponent>(Missle->GetRootComponent()))
-    {
-        MissilePrim->IgnoreActorWhenMoving(OwnerChar, true);
-        MissilePrim->MoveIgnoreActors.AddUnique(OwnerChar);
-        
-        // 오너의 모든 컴포넌트도 무시
-        TArray<UPrimitiveComponent*> OwnerPrims;
-        OwnerChar->GetComponents<UPrimitiveComponent>(OwnerPrims);
-        for (UPrimitiveComponent* OwnerPrim : OwnerPrims)
-        {
-            if (OwnerPrim)
-            {
-                MissilePrim->IgnoreComponentWhenMoving(OwnerPrim, true);
-                OwnerPrim->IgnoreComponentWhenMoving(MissilePrim, true);
-            }
-        }
-    }
+	// ========== 발사 및 유도 설정 ==========
+	const FVector LaunchDir = SpawnRot.Vector();
+	UProjectileMovementComponent* Move = ForceMakeMovableAndLaunch(Missle, LaunchDir);
 
-    const FVector LaunchDir = SpawnRot.Vector();
-    UProjectileMovementComponent* Move = ForceMakeMovableAndLaunch(Missle, LaunchDir);
+	// 타겟이 있으면 유도 미사일로 설정
+	if (Target && Move)
+	{
+		Move->bIsHomingProjectile = true;
+		Move->HomingTargetComponent = Target->GetRootComponent();
+		Move->HomingAccelerationMagnitude = HomingAcceleration;
+		Move->bRotationFollowsVelocity = true;
+		Move->Activate(true);
+	}
 
-    if (Target && Move)
-    {
-        Move->bIsHomingProjectile = true;
-        Move->HomingTargetComponent = Target->GetRootComponent();
-        Move->HomingAccelerationMagnitude = HomingAcceleration;
-        Move->bRotationFollowsVelocity = true;
-        Move->Activate(true);
-    }
-
-    InitDamageOnMissle(Missle, OwnerChar);
+	// 데미지 설정
+	InitDamageOnMissle(Missle, OwnerChar);
 }
 
-// 가장 가까운 적 선택 함수.
+// ========================================
+// 가장 가까운 적 찾기
+// ========================================
 AActor* UGA_MissleFire::PickBestTarget(const AActor* Owner) const
 {
-    if (!Owner) return nullptr;
-    UWorld* World = Owner->GetWorld();
-    if (!World) return nullptr;
+	if (!Owner) return nullptr;
+	UWorld* World = Owner->GetWorld();
+	if (!World) return nullptr;
 
-    const FVector OLoc = Owner->GetActorLocation();
+	const FVector OLoc = Owner->GetActorLocation();
 
-    if (Owner->ActorHasTag(TEXT("Enemy")) || Owner->IsA(AEnemyAirship::StaticClass()))
-    {
-        return UGameplayStatics::GetPlayerPawn(World, 0);
-    }
+	// Enemy가 발사하는 경우 → 플레이어를 타겟으로
+	if (Owner->ActorHasTag(TEXT("Enemy")) || Owner->IsA(AEnemyAirship::StaticClass()))
+	{
+		return UGameplayStatics::GetPlayerPawn(World, 0);
+	}
 
-    TArray<AActor*> AllActors;
-    UGameplayStatics::GetAllActorsOfClass(World, AActor::StaticClass(), AllActors);
+	// 플레이어가 발사하는 경우 → 가장 가까운 Enemy 찾기
+	TArray<AActor*> AllActors;
+	UGameplayStatics::GetAllActorsOfClass(World, AActor::StaticClass(), AllActors);
 
-    TArray<AActor*> Candidates;
-    for (AActor* A : AllActors)
-    {
-        if (A && A->ActorHasTag(TEXT("Enemy")))
-        {
-            Candidates.Add(A);
-        }
-    }
+	// Enemy 태그가 있는 액터들만 필터링
+	TArray<AActor*> Candidates;
+	for (AActor* A : AllActors)
+	{
+		if (A && A->ActorHasTag(TEXT("Enemy")))
+		{
+			Candidates.Add(A);
+		}
+	}
 
-    AActor* Best = nullptr;
-    float BestDistSq = MaxLockDistance * MaxLockDistance;
+	// 최단 거리의 적 선택
+	AActor* Best = nullptr;
+	float BestDistSq = MaxLockDistance * MaxLockDistance;
 
-    for (AActor* A : Candidates)
-    {
-        if (!A) continue;
-        const float D2 = FVector::DistSquared(OLoc, A->GetActorLocation());
-        if (D2 < BestDistSq) { BestDistSq = D2; Best = A; }
-    }
-    return Best;
+	for (AActor* A : Candidates)
+	{
+		if (!A) continue;
+		const float D2 = FVector::DistSquared(OLoc, A->GetActorLocation());
+		if (D2 < BestDistSq) 
+		{ 
+			BestDistSq = D2; 
+			Best = A; 
+		}
+	}
+	return Best;
 }
 
+// ========================================
+// 유도 미사일 설정 (대체 방법)
+// ========================================
 void UGA_MissleFire::SetupHoming(AActor* Missle, AActor* Target) const
 {
-    if (!Missle || !Target) return;
-    if (UProjectileMovementComponent* Move = Missle->FindComponentByClass<UProjectileMovementComponent>())
-    {
-        Move->bIsHomingProjectile = true;
-        Move->HomingTargetComponent = Target->GetRootComponent();
-        Move->HomingAccelerationMagnitude = HomingAcceleration;
-        Move->bRotationFollowsVelocity = true;
+	if (!Missle || !Target) return;
+	
+	if (UProjectileMovementComponent* Move = Missle->FindComponentByClass<UProjectileMovementComponent>())
+	{
+		// 유도 기능 활성화
+		Move->bIsHomingProjectile = true;
+		Move->HomingTargetComponent = Target->GetRootComponent();
+		Move->HomingAccelerationMagnitude = HomingAcceleration;
+		Move->bRotationFollowsVelocity = true;
 
-        if (Move->Velocity.IsNearlyZero())
-        {
-            const FVector Dir = (Target->GetActorLocation() - Missle->GetActorLocation()).GetSafeNormal();
-            Move->Velocity = Dir * FMath::Max(Move->InitialSpeed, InitialLaunchSpeed);
-        }
-        Move->Activate(true);
-    }
+		// 속도가 0이면 초기 속도 부여
+		if (Move->Velocity.IsNearlyZero())
+		{
+			const FVector Dir = (Target->GetActorLocation() - Missle->GetActorLocation()).GetSafeNormal();
+			Move->Velocity = Dir * FMath::Max(Move->InitialSpeed, InitialLaunchSpeed);
+		}
+		
+		Move->Activate(true);
+	}
 }
 
+// ========================================
+// 미사일에 데미지 설정 적용
+// ========================================
 void UGA_MissleFire::InitDamageOnMissle(AActor* Missle, AActor* Source) const
 {
-    if (!Missle) return;
+	if (!Missle) return;
 
-    static const FName FN_Setup(TEXT("SetupDamageSimple"));
-    if (UFunction* Fn = Missle->FindFunction(FN_Setup))
-    {
-        struct FSetupParams { TSubclassOf<UGameplayEffect> GE; FName SetBy; float Damage; AActor* SourceActor; } Params;
-        Params.GE = GE_MissleDamage;
-        Params.SetBy = SetByCallerDamageName;
-        Params.Damage = BaseDamage;
-        Params.SourceActor = Source;
-        Missle->ProcessEvent(Fn, &Params);
-    }
+	// 블루프린트 함수 "SetupDamageSimple" 호출
+	static const FName FN_Setup(TEXT("SetupDamageSimple"));
+	if (UFunction* Fn = Missle->FindFunction(FN_Setup))
+	{
+		// 데미지 파라미터 구조체 생성
+		struct FSetupParams 
+		{ 
+			TSubclassOf<UGameplayEffect> GE; 
+			FName SetBy; 
+			float Damage; 
+			AActor* SourceActor; 
+		} Params;
+		
+		Params.GE = GE_MissleDamage;
+		Params.SetBy = SetByCallerDamageName;
+		Params.Damage = BaseDamage;
+		Params.SourceActor = Source;
+		
+		// 함수 실행
+		Missle->ProcessEvent(Fn, &Params);
+	}
 }
 
+// ========================================
+// 미사일에 Projectile Movement 컴포넌트 설정 및 발사
+// ========================================
 UProjectileMovementComponent* UGA_MissleFire::ForceMakeMovableAndLaunch(AActor* Missle, const FVector& LaunchDir) const
 {
-    if (!Missle) return nullptr;
+	if (!Missle) return nullptr;
 
-    UPrimitiveComponent* RootPrim = Cast<UPrimitiveComponent>(Missle->GetRootComponent());
-    if (!RootPrim)
-    {
-        USphereComponent* Sphere = NewObject<USphereComponent>(Missle, TEXT("AutoRoot_Sphere"));
-        Sphere->InitSphereRadius(12.f);
-        Sphere->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-        Sphere->SetCollisionResponseToAllChannels(ECR_Ignore);
-        Sphere->SetCollisionResponseToChannel(ECC_WorldStatic, ECR_Block);
-        Sphere->SetMobility(EComponentMobility::Movable);
-        Sphere->RegisterComponent();
+	// ========== Root 컴포넌트 확인 및 생성 ==========
+	UPrimitiveComponent* RootPrim = Cast<UPrimitiveComponent>(Missle->GetRootComponent());
+	if (!RootPrim)
+	{
+		// Root가 없거나 Primitive가 아니면 새로 생성
+		USphereComponent* Sphere = NewObject<USphereComponent>(Missle, TEXT("AutoRoot_Sphere"));
+		Sphere->InitSphereRadius(12.f);
+		Sphere->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+		Sphere->SetCollisionResponseToAllChannels(ECR_Ignore);
+		Sphere->SetCollisionResponseToChannel(ECC_WorldStatic, ECR_Block);
+		Sphere->SetMobility(EComponentMobility::Movable);
+		Sphere->RegisterComponent();
 
-        USceneComponent* OldRoot = Missle->GetRootComponent();
-        const FTransform OldXf = OldRoot ? OldRoot->GetComponentTransform() : Missle->GetActorTransform();
+		// 기존 Root를 새 Sphere에 붙이기
+		USceneComponent* OldRoot = Missle->GetRootComponent();
+		const FTransform OldXf = OldRoot ? OldRoot->GetComponentTransform() : Missle->GetActorTransform();
 
-        Missle->SetRootComponent(Sphere);
-        Sphere->SetWorldTransform(OldXf);
-        if (OldRoot) OldRoot->AttachToComponent(Sphere, FAttachmentTransformRules::KeepWorldTransform);
+		Missle->SetRootComponent(Sphere);
+		Sphere->SetWorldTransform(OldXf);
+		if (OldRoot) OldRoot->AttachToComponent(Sphere, FAttachmentTransformRules::KeepWorldTransform);
 
-        RootPrim = Sphere;
-    }
-    else
-    {
-        RootPrim->SetMobility(EComponentMobility::Movable);
-        RootPrim->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-    }
+		RootPrim = Sphere;
+	}
+	else
+	{
+		// Root가 있으면 Movable로 설정
+		RootPrim->SetMobility(EComponentMobility::Movable);
+		RootPrim->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	}
 
-    UProjectileMovementComponent* Move = Missle->FindComponentByClass<UProjectileMovementComponent>();
-    if (!Move)
-    {
-        Move = NewObject<UProjectileMovementComponent>(Missle, TEXT("Auto_Project_Movement"));
-        Move->RegisterComponent();
-    }
+	// ========== Projectile Movement 컴포넌트 설정 ==========
+	UProjectileMovementComponent* Move = Missle->FindComponentByClass<UProjectileMovementComponent>();
+	if (!Move)
+	{
+		// 컴포넌트가 없으면 생성
+		Move = NewObject<UProjectileMovementComponent>(Missle, TEXT("Auto_Project_Movement"));
+		Move->RegisterComponent();
+	}
 
-    Move->SetUpdatedComponent(RootPrim);
-    Move->ProjectileGravityScale = 0.f;
-    Move->InitialSpeed = FMath::Max(Move->InitialSpeed, InitialLaunchSpeed);
-    Move->MaxSpeed = FMath::Max(Move->MaxSpeed, Move->InitialSpeed);
-    Move->bRotationFollowsVelocity = true;
-    Move->bInitialVelocityInLocalSpace = false;
+	// 이동 컴포넌트 설정
+	Move->SetUpdatedComponent(RootPrim);
+	Move->ProjectileGravityScale = 0.f;  // 중력 무시
+	Move->InitialSpeed = FMath::Max(Move->InitialSpeed, InitialLaunchSpeed);
+	Move->MaxSpeed = FMath::Max(Move->MaxSpeed, Move->InitialSpeed);
+	Move->bRotationFollowsVelocity = true;  // 속도 방향으로 회전
+	Move->bInitialVelocityInLocalSpace = false;
 
-    Move->Velocity = LaunchDir.GetSafeNormal() * Move->InitialSpeed;
-    Move->Activate(true);
+	// 발사 속도 설정
+	Move->Velocity = LaunchDir.GetSafeNormal() * Move->InitialSpeed;
+	Move->Activate(true);
 
-    return Move;
+	return Move;
 }
 
-// ================== [Cooldown] 쿨타임 적용 ==================
-
-// ================== [Cooldown] 미사일 쿨타임 태그 적용 ==================
-
+// ========================================
+// 쿨타임 적용
+// ========================================
 void UGA_MissleFire::ApplyMissileCooldown(
-    const FGameplayAbilitySpecHandle Handle,
-    const FGameplayAbilityActorInfo* ActorInfo,
-    const FGameplayAbilityActivationInfo ActivationInfo)
+	const FGameplayAbilitySpecHandle Handle,
+	const FGameplayAbilityActorInfo* ActorInfo,
+	const FGameplayAbilityActivationInfo ActivationInfo)
 {
-    if (!ActorInfo) return;
+	if (!ActorInfo) return;
 
-    UAbilitySystemComponent* ASC = ActorInfo->AbilitySystemComponent.Get();
-    if (!ASC) return;
+	UAbilitySystemComponent* ASC = ActorInfo->AbilitySystemComponent.Get();
+	if (!ASC) return;
 
-    // 이미 쿨타임 태그가 붙어 있으면 중복 적용 안 함
-    if (ASC->HasMatchingGameplayTag(Tag_CooldownMissile))
-        return;
+	// 이미 쿨타임 중이면 중복 적용 방지
+	if (ASC->HasMatchingGameplayTag(Tag_CooldownMissile))
+		return;
 
-    // 1) 쿨타임 태그 부여
-    ASC->AddLooseGameplayTag(Tag_CooldownMissile);
+	// 쿨타임 태그 부여
+	ASC->AddLooseGameplayTag(Tag_CooldownMissile);
 
-    // 2) 일정 시간이 지나면 태그 제거 (쿨타임 해제)
-    AActor* OwnerActor = Cast<AActor>(ActorInfo->AvatarActor.Get());
-    if (!OwnerActor) return;
+	// 일정 시간 후 쿨타임 태그 제거
+	AActor* OwnerActor = Cast<AActor>(ActorInfo->AvatarActor.Get());
+	if (!OwnerActor) return;
 
-    FTimerHandle CooldownTimerHandle;
-    TWeakObjectPtr<UAbilitySystemComponent> WeakASC(ASC);
+	FTimerHandle CooldownTimerHandle;
+	TWeakObjectPtr<UAbilitySystemComponent> WeakASC(ASC);
 
-    OwnerActor->GetWorldTimerManager().SetTimer(
-        CooldownTimerHandle,
-        FTimerDelegate::CreateLambda([WeakASC, this]()
-            {
-                if (!WeakASC.IsValid()) return;
-                WeakASC->RemoveLooseGameplayTag(Tag_CooldownMissile);
-            }),
-        CooldownDuration,
-        false
-    );
+	OwnerActor->GetWorldTimerManager().SetTimer(
+		CooldownTimerHandle,
+		FTimerDelegate::CreateLambda([WeakASC, this]()
+			{
+				if (!WeakASC.IsValid()) return;
+				WeakASC->RemoveLooseGameplayTag(Tag_CooldownMissile);
+			}),
+		CooldownDuration,
+		false
+	);
 }

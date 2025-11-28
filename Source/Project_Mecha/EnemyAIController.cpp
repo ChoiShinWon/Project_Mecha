@@ -1,4 +1,5 @@
 ﻿// EnemyAIController.cpp
+// 적 메카용 AI 컨트롤러 - Behavior Tree 실행, 블랙보드 초기화
 
 #include "EnemyAIController.h"
 #include "EnemyMecha.h"
@@ -6,65 +7,72 @@
 #include "BehaviorTree/BehaviorTree.h"
 #include "BehaviorTree/BlackboardComponent.h"
 
+// ========================================
+// 생성자
+// ========================================
 AEnemyAIController::AEnemyAIController()
 {
-    
-    BlackboardComp = CreateDefaultSubobject<UBlackboardComponent>(TEXT("BlackboardComp"));
+	// 블랙보드 컴포넌트 생성
+	BlackboardComp = CreateDefaultSubobject<UBlackboardComponent>(TEXT("BlackboardComp"));
 }
 
+// ========================================
+// Pawn 빙의 시 호출
+// ========================================
 void AEnemyAIController::OnPossess(APawn* InPawn)
 {
-    Super::OnPossess(InPawn);
+	Super::OnPossess(InPawn);
 
-    AEnemyMecha* Enemy = Cast<AEnemyMecha>(InPawn);
-    if (!Enemy)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("EnemyAIController::OnPossess - Pawn is NOT EnemyMecha"));
-        return;
-    }
+	// ========== EnemyMecha 확인 ==========
+	AEnemyMecha* Enemy = Cast<AEnemyMecha>(InPawn);
+	if (!Enemy)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("EnemyAIController::OnPossess - Pawn is NOT EnemyMecha"));
+		return;
+	}
 
-    UBehaviorTree* BT = Enemy->GetBehaviorTree();
-    if (!BT)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("EnemyAIController::OnPossess - BehaviorTreeAsset is NULL"));
-        return;
-    }
+	// ========== Behavior Tree 가져오기 ==========
+	UBehaviorTree* BT = Enemy->GetBehaviorTree();
+	if (!BT)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("EnemyAIController::OnPossess - BehaviorTreeAsset is NULL"));
+		return;
+	}
 
-    // === 블랙보드 초기화 ===
-    if (BT->BlackboardAsset)
-    {
-        const bool bBBOK = UseBlackboard(BT->BlackboardAsset, BlackboardComp);
-        if (!bBBOK || !BlackboardComp)
-        {
-            UE_LOG(LogTemp, Warning, TEXT("EnemyAIController::OnPossess - UseBlackboard FAILED"));
-            return;
-        }
-    }
-    else
-    {
-        UE_LOG(LogTemp, Warning, TEXT("EnemyAIController::OnPossess - BehaviorTree has no BlackboardAsset"));
-        return;
-    }
+	// ========== 블랙보드 초기화 ==========
+	if (BT->BlackboardAsset)
+	{
+		const bool bBBOK = UseBlackboard(BT->BlackboardAsset, BlackboardComp);
+		if (!bBBOK || !BlackboardComp)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("EnemyAIController::OnPossess - UseBlackboard FAILED"));
+			return;
+		}
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("EnemyAIController::OnPossess - BehaviorTree has no BlackboardAsset"));
+		return;
+	}
 
-    // 여기서 HomeLocation / IsDead 키 세팅
-    if (BlackboardComp)
-    {
-        // 블랙보드에 있는 키 이름과 정확히 맞춰야 한다.
-        // Blackboard 에서 Vector Key 이름이 "HomeLocation" 인지 확인할 것.
-        const FVector HomeLoc = Enemy->GetActorLocation();   // 스폰 위치 기준
-        BlackboardComp->SetValueAsVector(TEXT("HomeLocation"), HomeLoc);
+	// ========== 블랙보드 초기값 설정 ==========
+	if (BlackboardComp)
+	{
+		// 스폰 위치를 Home 위치로 설정
+		const FVector HomeLoc = Enemy->GetActorLocation();
+		BlackboardComp->SetValueAsVector(TEXT("HomeLocation"), HomeLoc);
 
-        // 선택사항: 죽음 플래그 초기화
-        BlackboardComp->SetValueAsBool(TEXT("IsDead"), false);
-    }
+		// 죽음 플래그 초기화
+		BlackboardComp->SetValueAsBool(TEXT("IsDead"), false);
+	}
 
-    // === Behavior Tree 실행 ===
-    const bool bBTOK = RunBehaviorTree(BT);
-    if (!bBTOK)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("EnemyAIController::OnPossess - RunBehaviorTree FAILED"));
-        return;
-    }
+	// ========== Behavior Tree 실행 ==========
+	const bool bBTOK = RunBehaviorTree(BT);
+	if (!bBTOK)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("EnemyAIController::OnPossess - RunBehaviorTree FAILED"));
+		return;
+	}
 
-    UE_LOG(LogTemp, Log, TEXT("EnemyAIController::OnPossess - BT started successfully"));
+	UE_LOG(LogTemp, Log, TEXT("EnemyAIController::OnPossess - BT started successfully"));
 }

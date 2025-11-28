@@ -1,99 +1,122 @@
 // MissionManager.cpp
+// 미션 진행 관리 - 적 처치 카운트, 보스 페이즈, 미션 클리어
 
 #include "MissionManager.h"
 #include "EnemyMecha.h"
 #include "Engine/World.h"
 
+// ========================================
+// 생성자
+// ========================================
 AMissionManager::AMissionManager()
 {
-    PrimaryActorTick.bCanEverTick = false;
+	PrimaryActorTick.bCanEverTick = false;
 
-    // ��Ƽ���� ���� �� �� �Ÿ� ���� �� �ʿ� ����
-    // ���߿� Ȯ���� �����̸� bReplicates = true; �����ص� ū ������ ����.
-    // bReplicates = true;
+	// 멀티플레이어 환경일 때 서버에서만 관리하도록 하려면:
+	// bReplicates = true;
 }
 
-void AMissionManager::StartMission(){
-    // ������ ���� �Ÿ� HasAuthority üũ ����,
-    // ���� �̱��̸� �� if �� ��°�� ������ �ȴ�.
-    if (!HasAuthority())
-    {
-        return;
-    }
+// ========================================
+// 미션 시작
+// ========================================
+void AMissionManager::StartMission()
+{
+	// 서버에서만 실행
+	if (!HasAuthority())
+	{
+		return;
+	}
 
-    CurrentKillCount = 0;
-    bMissionActive = true;
-    bBossPhaseStarted = false;
-    bBossDefeated = false;
-    BossInstance = nullptr;
+	// 카운터 초기화
+	CurrentKillCount = 0;
+	bMissionActive = true;
+	bBossPhaseStarted = false;
+	bBossDefeated = false;
+	BossInstance = nullptr;
 
-    MissionStartTime = GetWorld()->GetTimeSeconds();
-    MissionEndTime = 0.f;
+	// 시간 기록
+	MissionStartTime = GetWorld()->GetTimeSeconds();
+	MissionEndTime = 0.f;
 
-    // �׳� ���ÿ��� �ٷ� BP �̺�Ʈ ȣ��
-    OnMissionStartedBP(RequiredKillCount);
+	// 블루프린트 이벤트 호출
+	OnMissionStartedBP(RequiredKillCount);
 }
 
+// ========================================
+// 적 처치 알림
+// ========================================
 void AMissionManager::NotifyEnemyKilled(AEnemyMecha* KilledEnemy)
 {
-    if (!HasAuthority() || !bMissionActive)
-    {
-        return;
-    }
+	// 서버에서만, 미션 활성화 상태에서만 처리
+	if (!HasAuthority() || !bMissionActive)
+	{
+		return;
+	}
 
-    ++CurrentKillCount;
+	// 킬 카운트 증가
+	++CurrentKillCount;
 
-    OnMissionProgressBP(CurrentKillCount, RequiredKillCount);
+	// 진행도 업데이트 이벤트
+	OnMissionProgressBP(CurrentKillCount, RequiredKillCount);
 
-    if (CurrentKillCount >= RequiredKillCount && !bBossPhaseStarted)
-    {
-        StartBossPhase();
-    }
+	// 목표 달성 시 보스 페이즈 시작
+	if (CurrentKillCount >= RequiredKillCount && !bBossPhaseStarted)
+	{
+		StartBossPhase();
+	}
 }
 
+// ========================================
+// 보스 페이즈 시작
+// ========================================
 void AMissionManager::StartBossPhase()
 {
-    if (!HasAuthority())
-    {
-        return;
-    }
+	// 서버에서만 실행
+	if (!HasAuthority())
+	{
+		return;
+	}
 
-    if (bBossPhaseStarted)
-    {
-        return;
-    }
+	// 이미 시작했으면 무시
+	if (bBossPhaseStarted)
+	{
+		return;
+	}
 
-    bBossPhaseStarted = true;
+	bBossPhaseStarted = true;
 
-    // ���⼭�� "���� ������ ����" ��ȣ�� BP�� �ѱ��.
-    OnBossPhaseStartedBP();
+	// 블루프린트 이벤트 호출 (보스 스폰, UI 업데이트 등)
+	OnBossPhaseStartedBP();
 }
 
-
-
-// ������ �׾��� �� Boss ��(EnemyMecha / BP_BossCrunch)���� ȣ��
+// ========================================
+// 보스 격파 알림
+// ========================================
 void AMissionManager::NotifyBossDefeated(AEnemyMecha* DefeatedBoss)
 {
-    if (!HasAuthority())
-    {
-        return;
-    }
+	// 서버에서만 실행
+	if (!HasAuthority())
+	{
+		return;
+	}
 
-    // �ٸ� Enemy�� �߸� ȣ���ϴ� �� ����
-    if (DefeatedBoss != BossInstance)
-    {
-        return;
-    }
+	// 등록된 보스가 아니면 무시
+	if (DefeatedBoss != BossInstance)
+	{
+		return;
+	}
 
-    if (bBossDefeated)
-    {
-        return;
-    }
+	// 이미 처리했으면 무시
+	if (bBossDefeated)
+	{
+		return;
+	}
 
-    bBossDefeated = true;
-    bMissionActive = false;
-    MissionEndTime = GetWorld()->GetTimeSeconds();
+	// 미션 클리어 처리
+	bBossDefeated = true;
+	bMissionActive = false;
+	MissionEndTime = GetWorld()->GetTimeSeconds();
 
-    // ���⼭ ��¥ ���� �̼� Ŭ���� (��ũ ȭ��/��� ȭ������ ����)
-    OnMissionClearedBP();
+	// 블루프린트 이벤트 호출 (승리 화면, 보상 지급 등)
+	OnMissionClearedBP();
 }
