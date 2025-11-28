@@ -44,7 +44,13 @@ void UGA_MissleFire::ActivateAbility(
     const FGameplayAbilityActivationInfo ActivationInfo,
     const FGameplayEventData* TriggerEventData)
 {
-    if (!CommitAbility(Handle, ActorInfo, ActivationInfo)) return;
+  
+
+    if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[GA_MissileFire] CommitAbility FAILED"));
+        return;
+    }
 
     ACharacter* OwnerChar = Cast<ACharacter>(ActorInfo ? ActorInfo->AvatarActor.Get() : nullptr);
     if (!OwnerChar || !MissleProjectileClass)
@@ -94,6 +100,8 @@ void UGA_MissleFire::ActivateAbility(
 
 void UGA_MissleFire::SpawnMissle(int32 /*Index*/, ACharacter* OwnerChar)
 {
+
+
     if (!OwnerChar || !MissleProjectileClass) return;
 
     AActor* Target = PickBestTarget(OwnerChar);
@@ -127,6 +135,12 @@ void UGA_MissleFire::SpawnMissle(int32 /*Index*/, ACharacter* OwnerChar)
     Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
 
     AActor* Missle = OwnerChar->GetWorld()->SpawnActor<AActor>(MissleProjectileClass, SpawnLoc, SpawnRot, Params);
+
+
+    UE_LOG(LogTemp, Warning,
+        TEXT("[GA_MissileFire] SpawnActor result = %s"),
+        Missle ? *Missle->GetName() : TEXT("NULL"));
+
     if (!Missle) return;
 
     Missle->SetReplicates(true);
