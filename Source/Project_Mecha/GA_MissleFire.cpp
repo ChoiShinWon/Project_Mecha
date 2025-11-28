@@ -44,7 +44,7 @@ void UGA_MissleFire::ActivateAbility(
     const FGameplayAbilityActivationInfo ActivationInfo,
     const FGameplayEventData* TriggerEventData)
 {
-  
+    UE_LOG(LogTemp, Warning, TEXT("[GA_MissileFire] ActivateAbility CALLED"));
 
     if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
     {
@@ -52,20 +52,30 @@ void UGA_MissleFire::ActivateAbility(
         return;
     }
 
+    UE_LOG(LogTemp, Warning, TEXT("[GA_MissileFire] CommitAbility SUCCESS"));
+
     ACharacter* OwnerChar = Cast<ACharacter>(ActorInfo ? ActorInfo->AvatarActor.Get() : nullptr);
     if (!OwnerChar || !MissleProjectileClass)
     {
+        UE_LOG(LogTemp, Warning, TEXT("[GA_MissileFire] OwnerChar or MissleProjectileClass is NULL"));
         EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
         return;
     }
 
+    UE_LOG(LogTemp, Warning, TEXT("[GA_MissileFire] OwnerChar valid, HasAuthority=%s"), 
+        OwnerChar->HasAuthority() ? TEXT("TRUE") : TEXT("FALSE"));
+
     if (!OwnerChar->HasAuthority())
     {
+        UE_LOG(LogTemp, Warning, TEXT("[GA_MissileFire] No Authority - EndAbility"));
         EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
         return;
     }
 
-    for (int32 i = 0; i < NumProjectiles; ++i)
+    // 첫 미사일은 즉시 발사, 나머지는 타이머로
+    SpawnMissle(0, OwnerChar);
+
+    for (int32 i = 1; i < NumProjectiles; ++i)
     {
         FTimerHandle Th;
         TWeakObjectPtr<UGA_MissleFire> WeakThis(this);
@@ -98,13 +108,20 @@ void UGA_MissleFire::ActivateAbility(
 }
 
 
-void UGA_MissleFire::SpawnMissle(int32 /*Index*/, ACharacter* OwnerChar)
+void UGA_MissleFire::SpawnMissle(int32 Index, ACharacter* OwnerChar)
 {
+    UE_LOG(LogTemp, Warning, TEXT("[GA_MissileFire] SpawnMissle called - Index=%d, OwnerChar=%s"), 
+        Index, OwnerChar ? *OwnerChar->GetName() : TEXT("NULL"));
 
-
-    if (!OwnerChar || !MissleProjectileClass) return;
+    if (!OwnerChar || !MissleProjectileClass)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[GA_MissileFire] SpawnMissle FAILED - OwnerChar or MissleProjectileClass is NULL"));
+        return;
+    }
 
     AActor* Target = PickBestTarget(OwnerChar);
+    UE_LOG(LogTemp, Warning, TEXT("[GA_MissileFire] Target found: %s"), 
+        Target ? *Target->GetName() : TEXT("NULL"));
 
     FVector  SpawnLoc;
     FRotator SpawnRot;
@@ -114,10 +131,12 @@ void UGA_MissleFire::SpawnMissle(int32 /*Index*/, ACharacter* OwnerChar)
     {
         SpawnLoc = Mesh->GetSocketLocation(SocketName);
         SpawnRot = Mesh->GetSocketRotation(SocketName);
+        // 소켓 위치에서 추가로 앞쪽으로 오프셋 적용 (충돌 방지)
+        SpawnLoc += Mesh->GetSocketRotation(SocketName).Vector() * 80.f;
     }
     else
     {
-        SpawnLoc = OwnerChar->GetActorLocation() + OwnerChar->GetActorForwardVector() * SpawnOffset + FVector(0, 0, 50);
+        SpawnLoc = OwnerChar->GetActorLocation() + OwnerChar->GetActorForwardVector() * (SpawnOffset + 80.f) + FVector(0, 0, 50);
         SpawnRot = OwnerChar->GetControlRotation();
     }
 
@@ -148,9 +167,23 @@ void UGA_MissleFire::SpawnMissle(int32 /*Index*/, ACharacter* OwnerChar)
     Missle->SetActorEnableCollision(true);
     Missle->SetActorTickEnabled(true);
 
-    if (UPrimitiveComponent* Prim = Cast<UPrimitiveComponent>(Missle->GetRootComponent()))
+    // 미사일과 오너 캐릭터 간 충돌 완전 무시 (양방향)
+    if (UPrimitiveComponent* MissilePrim = Cast<UPrimitiveComponent>(Missle->GetRootComponent()))
     {
-        Prim->IgnoreActorWhenMoving(OwnerChar, true);
+        MissilePrim->IgnoreActorWhenMoving(OwnerChar, true);
+        MissilePrim->MoveIgnoreActors.AddUnique(OwnerChar);
+        
+        // 오너의 모든 컴포넌트도 무시
+        TArray<UPrimitiveComponent*> OwnerPrims;
+        OwnerChar->GetComponents<UPrimitiveComponent>(OwnerPrims);
+        for (UPrimitiveComponent* OwnerPrim : OwnerPrims)
+        {
+            if (OwnerPrim)
+            {
+                MissilePrim->IgnoreComponentWhenMoving(OwnerPrim, true);
+                OwnerPrim->IgnoreComponentWhenMoving(MissilePrim, true);
+            }
+        }
     }
 
     const FVector LaunchDir = SpawnRot.Vector();
