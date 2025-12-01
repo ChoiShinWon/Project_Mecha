@@ -25,6 +25,7 @@
 #include "Animation/AnimMontage.h"
 
 #include "EnemyMecha.h"
+#include "Particles/ParticleSystemComponent.h"
 
 // ========================================
 // 생성자
@@ -66,6 +67,12 @@ AMechaCharacterBase::AMechaCharacterBase()
     // ========== 총구 위치 컴포넌트 ==========
     MuzzleLocation = CreateDefaultSubobject<USceneComponent>(TEXT("FireSocket"));
     MuzzleLocation->SetupAttachment(GetMesh(), MuzzleSocketName);
+
+    // ========== Overheat 파티클 컴포넌트 ==========
+    OverheatParticleComponent = CreateDefaultSubobject<UParticleSystemComponent>(TEXT("OverheatParticle"));
+    OverheatParticleComponent->SetupAttachment(GetMesh());
+    OverheatParticleComponent->bAutoActivate = false;  // 기본적으로 비활성화
+    OverheatParticleComponent->SetRelativeLocation(FVector(0.f, 0.f, 50.f));  // 캐릭터 중심 위치
 }
 
 // ========================================
@@ -301,6 +308,19 @@ void AMechaCharacterBase::OnEnergyChanged(const FOnAttributeChangeData& Data)
         {
             AbilitySystem->AddLooseGameplayTag(Tag_Overheated);
             UE_LOG(LogTemp, Warning, TEXT("[Energy] Overheated ON"));
+
+            // ========== Overheat 파티클 활성화 ==========
+            if (OverheatParticleComponent)
+            {
+                // 블루프린트에서 설정한 파티클 시스템이 있으면 적용
+                if (OverheatParticleSystem && OverheatParticleComponent->Template != OverheatParticleSystem)
+                {
+                    OverheatParticleComponent->SetTemplate(OverheatParticleSystem);
+                }
+
+                OverheatParticleComponent->Activate(true);
+                UE_LOG(LogTemp, Log, TEXT("[VFX] Overheat Particle Activated"));
+            }
         }
 
         // 일정 시간 후 과열 해제
@@ -313,6 +333,13 @@ void AMechaCharacterBase::OnEnergyChanged(const FOnAttributeChangeData& Data)
                 {
                     AbilitySystem->RemoveLooseGameplayTag(Tag_Overheated);
                     UE_LOG(LogTemp, Warning, TEXT("[Energy] Overheated OFF"));
+
+                    // ========== Overheat 파티클 비활성화 ==========
+                    if (OverheatParticleComponent)
+                    {
+                        OverheatParticleComponent->Deactivate();
+                        UE_LOG(LogTemp, Log, TEXT("[VFX] Overheat Particle Deactivated"));
+                    }
                 }
             },
             OverheatLockout,

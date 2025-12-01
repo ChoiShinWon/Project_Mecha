@@ -23,6 +23,7 @@ class UGameplayAbility;
 class UWBP_MechaHUD;
 class USceneComponent;
 class UAnimMontage;
+class UParticleSystemComponent;
 struct FOnAttributeChangeData;
 
 UENUM(BlueprintType)
@@ -81,6 +82,14 @@ protected:
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "GAS")
     UMechaAttributeSet* AttributeSet;
+
+    // ---- Overheat Particle System ----
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "VFX")
+    UParticleSystemComponent* OverheatParticleComponent;
+
+    // Overheat 시 재생할 파티클 시스템 (블루프린트에서 설정)
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "VFX")
+    UParticleSystem* OverheatParticleSystem;
 
     // ---- Input assets ----
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
