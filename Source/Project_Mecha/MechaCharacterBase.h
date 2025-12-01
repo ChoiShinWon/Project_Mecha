@@ -149,6 +149,10 @@ public:
     UFUNCTION(BlueprintCallable, Category = "HitReact")
     void PlayHitReactFromDirection(const FVector& AttackWorldLocation);
 
+    // === Overheat 상태 확인용 ===
+    UFUNCTION(BlueprintPure, Category = "GAS|Energy")
+    bool IsOverheated() const;
+
 protected:
     UPROPERTY(EditDefaultsOnly, Category = "GAS")
     int32 HoverInputID = 2;
@@ -222,8 +226,9 @@ private:
     // Overheat
     FTimerHandle Timer_OverheatClear;
 
+    // 에너지 0 됐을 때 Overheat 잠김 지속 시간 (초)
     UPROPERTY(EditDefaultsOnly, Category = "GAS|Energy")
-    float OverheatLockout = 1.0f;
+    float OverheatLockout = 5.0f;
 
     // Input handlers (이동/룩/점프만—부스트는 GA로)
     void Input_Move(const FInputActionValue& Value);

@@ -238,9 +238,7 @@ void UGA_Hover::StopHover(bool bFromEnergyDepleted)
 	// 호버링 상태 태그 제거
 	if (ASC) ASC->RemoveLooseGameplayTag(Tag_StateHovering);
 
-	// 에너지 고갈로 종료된 경우 과열 처리
-	if (bFromEnergyDepleted) 
-		ApplyOverheat();
+	
 
 	// 상승 보정 타이머 정리
 	if (UWorld* World = GetWorld())
@@ -275,44 +273,7 @@ void UGA_Hover::RemoveDrainGE()
 	}
 }
 
-// ========================================
-// 과열 상태 적용
-// ========================================
-void UGA_Hover::ApplyOverheat()
-{
-	if (!ASC) return;
 
-	// 과열 관련 태그 추가
-	ASC->AddLooseGameplayTag(Tag_StateOverheat);   // 과열 상태
-	ASC->AddLooseGameplayTag(Tag_CooldownHover);   // 쿨다운
-	ASC->AddLooseGameplayTag(Tag_BlockHover);      // 호버 차단
-
-	TWeakObjectPtr<UAbilitySystemComponent> WeakASC = ASC;
-
-	// 일정 시간 후 과열 해제
-	if (UWorld* World = GetWorld())
-	{
-		FTimerHandle Handle;
-		World->GetTimerManager().SetTimer(
-			Handle,
-			FTimerDelegate::CreateLambda([WeakASC,
-				Tag_Overheat = Tag_StateOverheat,
-				Tag_Cooldown = Tag_CooldownHover,
-				Tag_Block = Tag_BlockHover]()
-				{
-					if (UAbilitySystemComponent* ASC_Local = WeakASC.Get())
-					{
-						// 모든 과열 태그 제거
-						ASC_Local->RemoveLooseGameplayTag(Tag_Overheat);
-						ASC_Local->RemoveLooseGameplayTag(Tag_Cooldown);
-						ASC_Local->RemoveLooseGameplayTag(Tag_Block);
-					}
-				}),
-			CooldownSeconds, 
-			false
-		);
-	}
-}
 
 // ========================================
 // 호버링 상승 보정 (주기적 호출)

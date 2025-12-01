@@ -193,7 +193,4 @@ protected:
 	// Removes energy drain GE.
 	void RemoveDrainGE();
 
-	// 과열 상태 적용: 과열 태그 추가, 쿨다운 타이머 시작.
-	// Applies overheating: Adds overheating tags, starts cooldown timer.
-	void ApplyOverheat();
 };

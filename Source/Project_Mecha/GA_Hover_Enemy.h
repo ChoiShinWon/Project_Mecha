@@ -31,7 +31,7 @@ public:
     ) override;
 
 protected:
-    // == ¼³Á¤ °ª ==
+    // == ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ==
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hover|Enemy")
     bool bUseFlyingMode = true;
 
@@ -44,13 +44,24 @@ protected:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hover|Enemy")
     float GravityScaleWhileHover = 0.2f;
 
-    // Enemy°¡ °øÁß¿¡ ¶° ÀÖ´Â À¯Áö ½Ã°£
+    // Enemyï¿½ï¿½ ï¿½ï¿½ï¿½ß¿ï¿½ ï¿½ï¿½ ï¿½Ö´ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ã°ï¿½
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hover|Enemy")
-    float HoverDuration = 1.5f; // ÃÊ ´ÜÀ§, ÇÊ¿äÇÏ¸é Á¶Àı
+    float HoverDuration = 1.5f; // ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½, ï¿½Ê¿ï¿½ï¿½Ï¸ï¿½ ï¿½ï¿½ï¿½ï¿½
 
-    // »óÅÂ ÅÂ±×
+    // ï¿½ï¿½ï¿½ï¿½ ï¿½Â±ï¿½
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hover|Tags")
     FGameplayTag Tag_StateHovering;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hover|Tags")
+    FGameplayTag Tag_CooldownHover;
+
+    // ì¿¨ë‹¤ìš´ ì´í™íŠ¸ (ì„ íƒ)
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hover|Effects")
+    TSubclassOf<class UGameplayEffect> HoverCooldownEffectClass;
+
+    // ì¿¨íƒ€ì„ (ì´ˆ) - GE ëŒ€ì‹  ë‹¨ìˆœ íƒ€ì´ë¨¸ë¡œ ì‚¬ìš© ê°€ëŠ¥
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hover|Enemy")
+    float HoverCooldownDuration = 5.0f;
 
 private:
     TWeakObjectPtr<ACharacter> OwnerCharacter;
@@ -61,10 +72,12 @@ private:
     float SavedGroundFriction = 8.f;
 
     FTimerHandle HoverTimerHandle;
+    FTimerHandle CooldownTimerHandle;
 
     void StartHover();
     void StopHover();
 
     UFUNCTION()
     void OnHoverDurationEnded();
+
 };

@@ -68,6 +68,9 @@ public:
     UPROPERTY(BlueprintReadWrite, Category = "Dash")
     bool bDashOnCooldown = false;   // true면 아직 다음 Dash 못씀
 
+    UPROPERTY(BlueprintReadWrite, Category = "Hover")
+    bool bHoverOnCooldown = false;  // true면 아직 다음 Hover 못씀
+
 protected:
 
     // 플레이어와 같은 AttributeSet 사용 (Health, MaxHealth 등)
