@@ -104,11 +104,11 @@ void AEnemyMecha::BeginPlay()
 				);
 			}
 
-			// 호버링 능력 등록
-			if (HoverAbilityClass)
+			// 호버 능력 등록
+			if (HoverAbilityClass_Enemy)
 			{
 				AbilitySystem->GiveAbility(
-					FGameplayAbilitySpec(HoverAbilityClass, 1, 2)
+					FGameplayAbilitySpec(HoverAbilityClass_Enemy, 1, 2)
 				);
 			}
 
@@ -455,115 +455,11 @@ void AEnemyMecha::FireDashAbility()
 	AbilitySystem->TryActivateAbilityByClass(DashAbilityClass_Enemy);
 }
 
-// ========================================
-// 호버링 능력 활성화
-// ========================================
-void AEnemyMecha::ActivateHoverAbility()
+// 호버 능력 발동
+void AEnemyMecha::FireHoverAbility()
 {
-	if (!AbilitySystem)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("AEnemyMecha::ActivateHoverAbility - No ASC"));
+	if (!AbilitySystem || !HoverAbilityClass_Enemy) 
 		return;
-	}
 
-	if (!HoverAbilityClass)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("AEnemyMecha::ActivateHoverAbility - No HoverAbilityClass"));
-		return;
-	}
-
-	// 이미 활성화된 Ability가 있는지 확인
-	FGameplayTagContainer HoverTags;
-	HoverTags.AddTag(FGameplayTag::RequestGameplayTag(TEXT("State.Hovering")));
-	
-	TArray<FGameplayAbilitySpec*> Abilities;
-	AbilitySystem->GetActivatableGameplayAbilitySpecsByAllMatchingTags(HoverTags, Abilities);
-	
-	// 활성화된 Ability가 있는지 확인 (ActiveCount > 0)
-	bool bAlreadyActive = false;
-	for (FGameplayAbilitySpec* Spec : Abilities)
-	{
-		if (Spec && Spec->ActiveCount > 0)
-		{
-			bAlreadyActive = true;
-			break;
-		}
-	}
-	
-	if (bAlreadyActive)
-	{
-		UE_LOG(LogTemp, Log, TEXT("AEnemyMecha::ActivateHoverAbility - Already active, updating Blackboard only"));
-		// 이미 활성화되어 있으면 Blackboard만 업데이트
-		if (AAIController* AIController = Cast<AAIController>(GetController()))
-		{
-			if (UBlackboardComponent* Blackboard = AIController->GetBlackboardComponent())
-			{
-				Blackboard->SetValueAsBool(TEXT("IsHovering"), true);
-				UE_LOG(LogTemp, Log, TEXT("AEnemyMecha::ActivateHoverAbility - IsHovering = true 설정 (이미 활성화됨)"));
-			}
-		}
-		return;
-	}
-
-	bool bSuccess = AbilitySystem->TryActivateAbilityByClass(HoverAbilityClass);
-	
-	if (bSuccess)
-	{
-		UE_LOG(LogTemp, Log, TEXT("AEnemyMecha::ActivateHoverAbility - SUCCESS"));
-		
-		// Blackboard에 IsHovering 설정
-		if (AAIController* AIController = Cast<AAIController>(GetController()))
-		{
-			if (UBlackboardComponent* Blackboard = AIController->GetBlackboardComponent())
-			{
-				Blackboard->SetValueAsBool(TEXT("IsHovering"), true);
-				UE_LOG(LogTemp, Log, TEXT("AEnemyMecha::ActivateHoverAbility - IsHovering = true 설정"));
-			}
-		}
-	}
-	else
-	{
-		UE_LOG(LogTemp, Warning, TEXT("AEnemyMecha::ActivateHoverAbility - FAILED (TryActivateAbilityByClass returned false)"));
-		
-		// 실패 원인 확인
-		FGameplayAbilitySpec* Spec = AbilitySystem->FindAbilitySpecFromClass(HoverAbilityClass);
-		if (!Spec)
-		{
-			UE_LOG(LogTemp, Warning, TEXT("AEnemyMecha::ActivateHoverAbility - Ability not granted!"));
-		}
-		else
-		{
-			UE_LOG(LogTemp, Warning, TEXT("AEnemyMecha::ActivateHoverAbility - Ability found but activation failed. Level: %d, ActiveCount: %d"), 
-				Spec->Level, Spec->ActiveCount);
-		}
-	}
-}
-
-// ========================================
-// 호버링 능력 비활성화
-// ========================================
-void AEnemyMecha::DeactivateHoverAbility()
-{
-	if (!AbilitySystem)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("AEnemyMecha::DeactivateHoverAbility - No ASC"));
-		return;
-	}
-
-	// State.Hovering 태그를 가진 모든 Ability 취소
-	FGameplayTagContainer CancelTags;
-	CancelTags.AddTag(FGameplayTag::RequestGameplayTag(TEXT("State.Hovering")));
-	
-	AbilitySystem->CancelAbilities(&CancelTags);
-	UE_LOG(LogTemp, Log, TEXT("AEnemyMecha::DeactivateHoverAbility - Called"));
-	
-	// Blackboard에 IsHovering 설정
-	if (AAIController* AIController = Cast<AAIController>(GetController()))
-	{
-		if (UBlackboardComponent* Blackboard = AIController->GetBlackboardComponent())
-		{
-			Blackboard->SetValueAsBool(TEXT("IsHovering"), false);
-			UE_LOG(LogTemp, Log, TEXT("AEnemyMecha::DeactivateHoverAbility - IsHovering = false 설정"));
-		}
-	}
+	AbilitySystem->TryActivateAbilityByClass(HoverAbilityClass_Enemy);
 }

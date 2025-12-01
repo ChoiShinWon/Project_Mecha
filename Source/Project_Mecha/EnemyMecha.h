@@ -68,16 +68,6 @@ public:
     UPROPERTY(BlueprintReadWrite, Category = "Dash")
     bool bDashOnCooldown = false;   // true면 아직 다음 Dash 못씀
 
-    // 호버링 능력 클래스 (GA_Hover)
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Abilities")
-    TSubclassOf<UGameplayAbility> HoverAbilityClass;
-
-    UFUNCTION(BlueprintCallable, Category = "Abilities")
-    void ActivateHoverAbility();
-
-    UFUNCTION(BlueprintCallable, Category = "Abilities")
-    void DeactivateHoverAbility();
-
 protected:
 
     // 플레이어와 같은 AttributeSet 사용 (Health, MaxHealth 등)
@@ -123,6 +113,10 @@ protected:
     // HitReact 최소 간격 (초) – 너무 자주 안 튕기게
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "HitReact")
     float HitReactInterval = 0.4f;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Abilities")
+    TSubclassOf<UGameplayAbility> HoverAbilityClass_Enemy;
+
 
     // 현재 HitReact를 재생할 수 있는 상태인지
     bool bCanPlayHitReact = true;
@@ -196,4 +190,8 @@ public:
     // === HitReact 재생 함수 (Projectile에서 호출) ===
     UFUNCTION(BlueprintCallable, Category = "Enemy|HitReact")
     void PlayHitReact();
+
+    UFUNCTION(BlueprintCallable, Category = "Enemy|Abilities")
+    void FireHoverAbility();
+    
 };
