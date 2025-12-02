@@ -114,6 +114,43 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "GAS|Cue")
 	FGameplayTagContainer GameplayCues;
 
+	// ===== Camera Effects (카메라 효과) =====
+
+	// FOV 변경 활성화 여부.
+	// Enable FOV change.
+	UPROPERTY(EditDefaultsOnly, Category = "Hover|Camera")
+	bool bEnableFOVChange = false;
+
+	// 호버 중 FOV 값.
+	// FOV value during hover.
+	UPROPERTY(EditDefaultsOnly, Category = "Hover|Camera", meta = (EditCondition = "bEnableFOVChange"))
+	float HoverFOV = 95.0f;
+
+	// FOV 전환 속도 (높을수록 빠름).
+	// FOV transition speed (higher = faster).
+	UPROPERTY(EditDefaultsOnly, Category = "Hover|Camera", meta = (EditCondition = "bEnableFOVChange"))
+	float FOVBlendSpeed = 3.0f;
+
+	// FOV 복원 속도 (높을수록 빠름).
+	// FOV restore speed (higher = faster).
+	UPROPERTY(EditDefaultsOnly, Category = "Hover|Camera", meta = (EditCondition = "bEnableFOVChange"))
+	float FOVRestoreSpeed = 5.0f;
+
+	// 카메라 거리 변경 활성화 여부.
+	// Enable camera distance change.
+	UPROPERTY(EditDefaultsOnly, Category = "Hover|Camera")
+	bool bEnableCameraDistance = false;
+
+	// 호버 중 카메라 거리.
+	// Camera distance during hover.
+	UPROPERTY(EditDefaultsOnly, Category = "Hover|Camera", meta = (EditCondition = "bEnableCameraDistance"))
+	float HoverCameraDistance = 400.0f;
+
+	// 카메라 쉐이크 클래스.
+	// Camera shake class.
+	UPROPERTY(EditDefaultsOnly, Category = "Hover|Camera")
+	TSubclassOf<class UCameraShakeBase> HoverCameraShake;
+
 protected:
 	// ===== Runtime Variables (런타임 변수) =====
 
@@ -145,6 +182,19 @@ protected:
 	float SavedGravityScale = 1.f;
 	float SavedBrakingFrictionFactor = 0.f;
 	float SavedGroundFriction = 0.f;
+
+	// ===== Camera State (카메라 상태) =====
+	float OriginalFOV = 90.f;
+	float OriginalCameraDistance = 400.f;
+	float CurrentFOV = 90.f;
+	float TargetFOV = 90.f;
+	float CurrentCameraDistance = 400.f;
+	float TargetCameraDistance = 400.f;
+
+	bool bIsRestoring = false;  // 복원 중인지 여부
+
+	FTimerHandle CameraUpdateTimer;
+	FTimerHandle CleanupTimer;  // Failsafe 타이머
 
 	// ===== Ability Overrides (능력 오버라이드) =====
 
@@ -192,5 +242,18 @@ protected:
 	// 에너지 소모 GE 제거.
 	// Removes energy drain GE.
 	void RemoveDrainGE();
+
+	// 카메라 효과 적용.
+	// Applies camera effects.
+	void ApplyCameraEffects();
+
+	// 카메라 효과 복원.
+	// Restores camera effects.
+	void RestoreCameraEffects();
+
+	// 카메라 부드러운 업데이트 (매 프레임 호출).
+	// Smooth camera update (called every frame).
+	UFUNCTION()
+	void UpdateCameraSmooth();
 
 };

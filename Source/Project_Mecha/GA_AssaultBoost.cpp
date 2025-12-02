@@ -11,6 +11,8 @@
 #include "AbilitySystemComponent.h"
 #include "MechaAttributeSet.h"
 #include "GameFramework/PlayerController.h"
+#include "Camera/CameraComponent.h"
+#include "GameFramework/SpringArmComponent.h"
 
 // ========================================
 // 생성자
@@ -74,6 +76,9 @@ void UGA_AssaultBoost::ActivateAbility(
 		}
 	}
 
+	// ========== 카메라 효과 적용 ==========
+	ApplyCameraEffects();
+
 	// ========== 전방 돌진 ==========
 	if (UCharacterMovementComponent* Move = OwnerChar->GetCharacterMovement())
 	{
@@ -98,7 +103,7 @@ void UGA_AssaultBoost::ActivateAbility(
 		if (Mesh)
 		{
 			ActiveBoostFX.Empty();
-			
+
 			// 지정된 소켓들에 파티클 부착
 			for (const FName& SocketName : BoostSockets)
 			{
@@ -114,7 +119,7 @@ void UGA_AssaultBoost::ActivateAbility(
 						FVector::ZeroVector, Rot,
 						EAttachLocation::SnapToTarget, true
 					);
-					
+
 					if (FX)
 					{
 						FX->SetWorldScale3D(FVector(5.0f));
@@ -163,11 +168,6 @@ void UGA_AssaultBoost::ApplyDrainGE()
 	if (Spec.IsValid())
 	{
 		DrainGEHandle = ASC->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
-		UE_LOG(LogTemp, Warning, TEXT("[AssaultBoost] GE_AssaultBoostDrain applied!"));  
-	}
-	else
-	{
-		UE_LOG(LogTemp, Warning, TEXT("[AssaultBoost] Spec 생성 실패: GE_AssaultBoostDrain"));
 	}
 }
 
@@ -189,7 +189,7 @@ void UGA_AssaultBoost::RemoveDrainGE()
 void UGA_AssaultBoost::OnEnergyChanged(const FOnAttributeChangeData& Data)
 {
 	const float NewEnergy = Data.NewValue;
-	
+
 	// 에너지가 거의 0이 되면 과열 상태로 종료
 	if (NewEnergy <= KINDA_SMALL_NUMBER && IsActive())
 	{
@@ -231,7 +231,7 @@ void UGA_AssaultBoost::EndAbility(
 	// ========== 부스터 파티클 비활성화 ==========
 	for (UParticleSystemComponent* FX : ActiveBoostFX)
 	{
-		if (FX) 
+		if (FX)
 			FX->DeactivateSystem();
 	}
 	ActiveBoostFX.Empty();
@@ -261,4 +261,218 @@ void UGA_AssaultBoost::EndAbility(
 	}
 
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
+
+	// ========== 카메라 즉시 복원 시작 (Super::EndAbility 이후!) ==========
+	if (OwnerChar)
+	{
+		// 복원 모드 활성화
+		bIsRestoring = true;
+		TargetFOV = OriginalFOV;
+		TargetCameraDistance = OriginalCameraDistance;
+
+		// 복원 함수 호출
+		RestoreCameraEffects();
+	}
+}
+
+// ========================================
+// 카메라 효과 적용
+// ========================================
+void UGA_AssaultBoost::ApplyCameraEffects()
+{
+	if (!OwnerChar) return;
+
+	// ========== 현재 카메라 상태 저장 ==========
+	bIsRestoring = false;  // 부스트 시작 (복원 아님)
+
+	UCameraComponent* Camera = OwnerChar->FindComponentByClass<UCameraComponent>();
+	if (Camera)
+	{
+		OriginalFOV = Camera->FieldOfView;
+		CurrentFOV = OriginalFOV;
+		TargetFOV = bEnableFOVChange ? BoostFOV : OriginalFOV;
+	}
+
+	USpringArmComponent* SpringArm = OwnerChar->FindComponentByClass<USpringArmComponent>();
+	if (SpringArm)
+	{
+		OriginalCameraDistance = SpringArm->TargetArmLength;
+		CurrentCameraDistance = OriginalCameraDistance;
+		TargetCameraDistance = bEnableCameraDistance ? BoostCameraDistance : OriginalCameraDistance;
+	}
+
+	// ========== 부드러운 전환 타이머 시작 ==========
+	if (UWorld* World = OwnerChar->GetWorld())
+	{
+		World->GetTimerManager().SetTimer(
+			CameraUpdateTimer,
+			this,
+			&UGA_AssaultBoost::UpdateCameraSmooth,
+			0.016f,  // ~60fps
+			true     // 반복
+		);
+	}
+
+	// ========== 카메라 쉐이크 ==========
+	if (BoostCameraShake)
+	{
+		if (APlayerController* PC = Cast<APlayerController>(OwnerChar->GetController()))
+		{
+			PC->ClientStartCameraShake(BoostCameraShake);
+		}
+	}
+}
+
+// ========================================
+// 카메라 효과 복원
+// ========================================
+void UGA_AssaultBoost::RestoreCameraEffects()
+{
+	if (!OwnerChar) return;
+
+	// ========== 즉시 복원 시작 ==========
+	bIsRestoring = true;  // 복원 모드 활성화
+	TargetFOV = OriginalFOV;
+	TargetCameraDistance = OriginalCameraDistance;
+
+	// 즉시 한번 업데이트 (복원 즉시 시작!)
+	UpdateCameraSmooth();
+
+	if (UWorld* World = OwnerChar->GetWorld())
+	{
+		// 기존 타이머 정리 후 즉시 재시작
+		World->GetTimerManager().ClearTimer(CameraUpdateTimer);
+
+		World->GetTimerManager().SetTimer(
+			CameraUpdateTimer,
+			this,
+			&UGA_AssaultBoost::UpdateCameraSmooth,
+			0.016f,  // ~60fps
+			true     // 반복
+		);
+	}
+
+	if (UWorld* World = OwnerChar->GetWorld())
+	{
+		// 기존 Cleanup 타이머 정리
+		World->GetTimerManager().ClearTimer(CleanupTimer);
+
+		// Failsafe: 10초 후에도 복원이 안 되면 강제 정리 (보통은 UpdateCameraSmooth에서 자동 정리됨)
+		World->GetTimerManager().SetTimer(
+			CleanupTimer,
+			[this]()
+			{
+				if (UWorld* World = OwnerChar ? OwnerChar->GetWorld() : nullptr)
+				{
+					// 최종 카메라 상태 확인 및 강제 설정
+					UCameraComponent* Camera = OwnerChar->FindComponentByClass<UCameraComponent>();
+					if (Camera && bEnableFOVChange)
+					{
+						// 정확하게 설정
+						Camera->SetFieldOfView(OriginalFOV);
+					}
+
+					USpringArmComponent* SpringArm = OwnerChar->FindComponentByClass<USpringArmComponent>();
+					if (SpringArm && bEnableCameraDistance)
+					{
+						SpringArm->TargetArmLength = OriginalCameraDistance;
+					}
+
+					World->GetTimerManager().ClearTimer(CameraUpdateTimer);
+				}
+			},
+			10.0f,  // 2초 → 10초 (충분한 시간, 보통은 자동 완료됨)
+			false
+		);
+	}
+}
+
+// ========================================
+// 카메라 부드러운 업데이트 (매 프레임 호출)
+// ========================================
+void UGA_AssaultBoost::UpdateCameraSmooth()
+{
+	if (!OwnerChar)
+	{
+		return;
+	}
+
+	const float DeltaTime = 0.016f;  // ~60fps
+
+	// ========== FOV 부드러운 전환 ==========
+	if (bEnableFOVChange)
+	{
+		UCameraComponent* Camera = OwnerChar->FindComponentByClass<UCameraComponent>();
+		if (Camera)
+		{
+			// 현재 FOV 가져오기
+			float OldFOV = Camera->FieldOfView;
+
+			// 복원 중일 때는 더 느린 속도 사용
+			float CurrentBlendSpeed = bIsRestoring ? FOVRestoreSpeed : FOVBlendSpeed;
+
+			// 타겟 FOV로 부드럽게 보간
+			float NewFOV = FMath::FInterpTo(OldFOV, TargetFOV, DeltaTime, CurrentBlendSpeed);
+			Camera->SetFieldOfView(NewFOV);
+
+			CurrentFOV = NewFOV;
+
+			// ========== 복원 완료 체크 (목표에 거의 도달하면 타이머 정리) ==========
+			if (bIsRestoring && FMath::Abs(NewFOV - TargetFOV) < 0.5f)
+			{
+				// 정확하게 설정
+				Camera->SetFieldOfView(TargetFOV);
+
+				// 거리도 체크
+				bool bDistanceRestored = true;
+				if (bEnableCameraDistance)
+				{
+					USpringArmComponent* SpringArm = OwnerChar->FindComponentByClass<USpringArmComponent>();
+					if (SpringArm)
+					{
+						float CurrentDist = SpringArm->TargetArmLength;
+						if (FMath::Abs(CurrentDist - TargetCameraDistance) < 5.0f)
+						{
+							SpringArm->TargetArmLength = TargetCameraDistance;
+						}
+						else
+						{
+							bDistanceRestored = false;
+						}
+					}
+				}
+
+				// 둘 다 복원 완료되면 타이머 정리
+				if (bDistanceRestored)
+				{
+					if (UWorld* World = OwnerChar->GetWorld())
+					{
+						World->GetTimerManager().ClearTimer(CameraUpdateTimer);
+						World->GetTimerManager().ClearTimer(CleanupTimer);  // Failsafe 타이머도 정리
+					}
+					bIsRestoring = false;
+				}
+			}
+		}
+	}
+
+	// ========== 카메라 거리 부드러운 전환 ==========
+	if (bEnableCameraDistance)
+	{
+		USpringArmComponent* SpringArm = OwnerChar->FindComponentByClass<USpringArmComponent>();
+		if (SpringArm)
+		{
+			// 현재 거리 가져오기
+			float OldDistance = SpringArm->TargetArmLength;
+
+			// 복원 중일 때는 더 느린 속도 사용
+			float CurrentBlendSpeed = bIsRestoring ? FOVRestoreSpeed : FOVBlendSpeed;
+
+			// 타겟 거리로 부드럽게 보간
+			float NewDistance = FMath::FInterpTo(OldDistance, TargetCameraDistance, DeltaTime, CurrentBlendSpeed);
+			SpringArm->TargetArmLength = NewDistance;
+
+			CurrentCameraDistance = NewDistance;
+		}
+	}
 }
