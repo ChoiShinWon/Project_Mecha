@@ -158,6 +158,22 @@ public:
     UFUNCTION(BlueprintCallable, Category = "HitReact")
     void PlayHitReactFromDirection(const FVector& AttackWorldLocation);
 
+    // === Death ===
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Death|Montage")
+    UAnimMontage* DeathMontage;
+
+    // 죽음 후 Ragdoll 활성화 여부 (true면 물리 시뮬레이션, false면 애니메이션 포즈 유지)
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Death|Settings")
+    bool bUseRagdollOnDeath = false;
+
+    // 죽음 후 콜리전 비활성화 여부 (true면 적의 공격이 안 맞음)
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Death|Settings")
+    bool bDisableCollisionOnDeath = true;
+
+    // 플레이어가 죽었는지 확인
+    UFUNCTION(BlueprintPure, Category = "Death")
+    bool IsDead() const { return bIsDead; }
+
     // === Overheat 상태 확인용 ===
     UFUNCTION(BlueprintPure, Category = "GAS|Energy")
     bool IsOverheated() const;
@@ -186,6 +202,17 @@ protected:
 
     UPROPERTY(BlueprintReadWrite)
     UWBP_MechaHUD* MechaHUDWidget = nullptr;
+
+    // Game Over UI
+    UPROPERTY(EditDefaultsOnly, Category = "UI|GameOver")
+    TSubclassOf<class UWBP_GameOver> GameOverWidgetClass;
+
+    UPROPERTY(BlueprintReadWrite)
+    class UWBP_GameOver* GameOverWidget = nullptr;
+
+    // 게임오버 페이드 인 지속 시간
+    UPROPERTY(EditDefaultsOnly, Category = "UI|GameOver")
+    float GameOverFadeInDuration = 2.0f;
 
     // ---- Default Tags ----
     UPROPERTY(EditDefaultsOnly, Category = "GAS|Tags", meta = (Categories = "State,Ability,Status,Input"))
@@ -216,6 +243,11 @@ private:
     float GetMaxHealth() const;
     FDelegateHandle HealthChangedHandle;
     void OnHealthChanged(const FOnAttributeChangeData& Data);
+
+    // Death
+    bool bIsDead = false;
+    void HandleDeath();
+    void ShowGameOverScreen();
 
     // Cached tags
     FGameplayTag Tag_Boosting;

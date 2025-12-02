@@ -11,6 +11,7 @@
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
 #include "WBP_MechaHUD.h"
+#include "WBP_GameOver.h"
 #include "GA_Attack.h"
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -26,6 +27,8 @@
 
 #include "EnemyMecha.h"
 #include "Particles/ParticleSystemComponent.h"
+#include "Components/CapsuleComponent.h"
+#include "Components/SkeletalMeshComponent.h"
 
 // ========================================
 // 생성자
@@ -600,6 +603,28 @@ void AMechaCharacterBase::OnHealthChanged(const FOnAttributeChangeData& Data)
         const float Damage = OldHealth - NewHealth;
         MechaHUDWidget->PlayDamageOverlay(Damage);
     }
+
+    // 이미 죽었으면 더 처리 안 함
+    if (bIsDead)
+    {
+        return;
+    }
+
+    // ========== 체력이 0 이하로 떨어지면 사망 ==========
+    if (NewHealth <= 0.f)
+    {
+        bIsDead = true;
+
+        // Dead 태그 추가
+        if (AbilitySystem)
+        {
+            AbilitySystem->AddLooseGameplayTag(
+                FGameplayTag::RequestGameplayTag(TEXT("State.Dead"))
+            );
+        }
+
+        HandleDeath();
+    }
 }
 
 float AMechaCharacterBase::GetHealth() const
@@ -616,6 +641,155 @@ float AMechaCharacterBase::GetMaxHealth() const
 bool AMechaCharacterBase::IsOverheated() const
 {
     return (AbilitySystem && AbilitySystem->HasMatchingGameplayTag(Tag_Overheated));
+}
+
+// ========================================
+// 사망 처리
+// ========================================
+void AMechaCharacterBase::HandleDeath()
+{
+    UE_LOG(LogTemp, Warning, TEXT("[Death] Player %s has died!"), *GetName());
+
+    // ========== 입력 비활성화 ==========
+    if (APlayerController* PC = Cast<APlayerController>(GetController()))
+    {
+        DisableInput(PC);
+    }
+
+    // ========== 이동 정지 ==========
+    if (auto* Move = GetCharacterMovement())
+    {
+        Move->StopMovementImmediately();
+        Move->DisableMovement();
+    }
+
+    // ========== 모든 어빌리티 취소 ==========
+    if (AbilitySystem)
+    {
+        AbilitySystem->CancelAllAbilities();
+    }
+
+    // ========== 콜리전 비활성화 (옵션) ==========
+    if (bDisableCollisionOnDeath)
+    {
+        // ========== 캡슐 콜리전 완전 비활성화 ==========
+        if (UCapsuleComponent* Capsule = GetCapsuleComponent())
+        {
+            Capsule->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+            UE_LOG(LogTemp, Log, TEXT("[Death] Capsule collision disabled for %s"), *GetName());
+        }
+
+        // ========== Mesh 콜리전 응답 변경 - Enemy가 감지/공격 못하게 ==========
+        if (USkeletalMeshComponent* SkelMesh = GetMesh())
+        {
+            // Pawn 채널 무시 (Enemy AI 감지 방지)
+            SkelMesh->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore);
+            
+            // 커스텀 채널들 무시 (프로젝타일 등)
+            SkelMesh->SetCollisionResponseToChannel(ECC_GameTraceChannel1, ECR_Ignore);
+            SkelMesh->SetCollisionResponseToChannel(ECC_GameTraceChannel2, ECR_Ignore);
+            
+            // Visibility 채널 무시 (AI 시야 감지 방지)
+            SkelMesh->SetCollisionResponseToChannel(ECC_Visibility, ECR_Ignore);
+            
+            UE_LOG(LogTemp, Log, TEXT("[Death] Mesh collision responses changed for %s"), *GetName());
+        }
+    }
+    else
+    {
+        // 콜리전은 유지하되, AI 감지만 막기
+        if (UCapsuleComponent* Capsule = GetCapsuleComponent())
+        {
+            // Pawn 채널 무시 (Enemy AI가 타겟으로 인식 못함)
+            Capsule->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore);
+            
+            // Visibility 무시 (AI 시야에 안 보임)
+            Capsule->SetCollisionResponseToChannel(ECC_Visibility, ECR_Ignore);
+            
+            UE_LOG(LogTemp, Log, TEXT("[Death] AI detection disabled for %s"), *GetName());
+        }
+    }
+
+    // ========== Ragdoll 또는 애니메이션 ==========
+    if (bUseRagdollOnDeath)
+    {
+        // Ragdoll 모드: 물리 시뮬레이션 활성화
+        if (USkeletalMeshComponent* SkelMesh = GetMesh())
+        {
+            SkelMesh->SetSimulatePhysics(true);
+            SkelMesh->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
+            SkelMesh->SetCollisionProfileName(TEXT("Ragdoll"));
+            UE_LOG(LogTemp, Log, TEXT("[Death] Ragdoll activated for %s"), *GetName());
+        }
+    }
+    else
+    {
+        // 애니메이션 모드: Death 몽타주 재생
+        if (DeathMontage)
+        {
+            if (UAnimInstance* AnimInst = GetMesh()->GetAnimInstance())
+            {
+                // 몽타주 재생 (BlendOut 시간을 0으로 설정하면 마지막 포즈 유지)
+                AnimInst->Montage_Play(DeathMontage, 1.0f);
+                
+                // 몽타주가 끝나도 마지막 프레임 유지
+                // (BlendOut을 0으로 설정하거나, 애니메이션의 마지막 프레임에 Pose Snapshot 사용)
+                UE_LOG(LogTemp, Log, TEXT("[Death] Playing death montage for %s"), *GetName());
+            }
+        }
+        else
+        {
+            UE_LOG(LogTemp, Warning, TEXT("[Death] No death montage set for %s"), *GetName());
+        }
+    }
+
+    // ========== 게임오버 UI 표시 ==========
+    ShowGameOverScreen();
+}
+
+// ========================================
+// 게임오버 화면 표시
+// ========================================
+void AMechaCharacterBase::ShowGameOverScreen()
+{
+    APlayerController* PC = Cast<APlayerController>(GetController());
+    if (!PC)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[GameOver] No PlayerController found"));
+        return;
+    }
+
+    // ========== 게임오버 위젯 생성 (아직 없으면) ==========
+    if (!GameOverWidget && GameOverWidgetClass)
+    {
+        GameOverWidget = CreateWidget<UWBP_GameOver>(PC, GameOverWidgetClass);
+        if (GameOverWidget)
+        {
+            GameOverWidget->AddToViewport(999);  // 최상위 Z-Order
+            UE_LOG(LogTemp, Log, TEXT("[GameOver] Game Over widget created"));
+        }
+        else
+        {
+            UE_LOG(LogTemp, Warning, TEXT("[GameOver] Failed to create Game Over widget"));
+            return;
+        }
+    }
+
+    // ========== 게임오버 화면 표시 ==========
+    if (GameOverWidget)
+    {
+        GameOverWidget->ShowGameOver(GameOverFadeInDuration);
+        UE_LOG(LogTemp, Warning, TEXT("[GameOver] Game Over screen displayed"));
+
+        // 마우스 커서 표시 (메뉴 선택 가능하도록)
+        PC->bShowMouseCursor = true;
+        PC->bEnableClickEvents = true;
+        PC->bEnableMouseOverEvents = true;
+    }
+    else
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[GameOver] GameOverWidget is null. Set GameOverWidgetClass in Blueprint"));
+    }
 }
 
 // ========================================
@@ -762,6 +936,12 @@ void AMechaCharacterBase::UpdateLockOnView(float DeltaTime)
 // ========================================
 void AMechaCharacterBase::PlayHitReactFromDirection(const FVector& AttackWorldLocation)
 {
+    // ========== 죽었으면 HitReact 재생 안 함 ==========
+    if (bIsDead)
+    {
+        return;
+    }
+
     if (!HitReactMontage || !GetMesh())
     {
         return;
