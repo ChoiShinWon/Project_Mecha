@@ -3,6 +3,7 @@
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "TimerManager.h"
+#include "EnemyMecha.h"
 
 UGA_Hover_Enemy::UGA_Hover_Enemy()
 {
@@ -74,71 +75,83 @@ void UGA_Hover_Enemy::EndAbility(
 
 void UGA_Hover_Enemy::StartHover()
 {
-    if (!OwnerCharacter.IsValid()) return;
+	if (!OwnerCharacter.IsValid()) return;
 
-    UCharacterMovementComponent* Move = OwnerCharacter->GetCharacterMovement();
-    if (!Move) return;
+	UCharacterMovementComponent* Move = OwnerCharacter->GetCharacterMovement();
+	if (!Move) return;
 
-    // 저장
-    SavedGravityScale = Move->GravityScale;
-    SavedBrakingFrictionFactor = Move->BrakingFrictionFactor;
-    SavedGroundFriction = Move->GroundFriction;
+	// 저장
+	SavedGravityScale = Move->GravityScale;
+	SavedBrakingFrictionFactor = Move->BrakingFrictionFactor;
+	SavedGroundFriction = Move->GroundFriction;
 
-    // 태그 추가
-    if (ASC.IsValid() && Tag_StateHovering.IsValid())
-    {
-        ASC->AddLooseGameplayTag(Tag_StateHovering);
-    }
+	// 태그 추가
+	if (ASC.IsValid() && Tag_StateHovering.IsValid())
+	{
+		ASC->AddLooseGameplayTag(Tag_StateHovering);
+	}
 
-    // 공중에서 미끄러지듯 움직이게
-    Move->BrakingFrictionFactor = 0.f;
-    Move->GroundFriction = 0.f;
+	// ========== Hover Particle 활성화 ==========
+	if (AEnemyMecha* EnemyMecha = Cast<AEnemyMecha>(OwnerCharacter.Get()))
+	{
+		EnemyMecha->ActivateHoverParticles();
+	}
 
-    const bool bOnGround = Move->IsMovingOnGround();
+	// 공중에서 미끄러지듯 움직이게
+	Move->BrakingFrictionFactor = 0.f;
+	Move->GroundFriction = 0.f;
 
-    if (bUseFlyingMode)
-    {
-        Move->SetMovementMode(MOVE_Flying);
+	const bool bOnGround = Move->IsMovingOnGround();
 
-        if (bOnGround)
-        {
-            OwnerCharacter->LaunchCharacter(FVector(0, 0, HoverLiftImpulse), false, false);
-        }
-        else if (Move->Velocity.Z < 80.f)
-        {
-            Move->Velocity.Z = 80.f;
-        }
-    }
-    else
-    {
-        if (bOnGround)
-        {
-            Move->SetMovementMode(MOVE_Falling);
-            OwnerCharacter->LaunchCharacter(FVector(0, 0, HoverLiftImpulse), false, false);
-        }
-        Move->GravityScale = GravityScaleWhileHover;
-    }
+	if (bUseFlyingMode)
+	{
+		Move->SetMovementMode(MOVE_Flying);
+
+		if (bOnGround)
+		{
+			OwnerCharacter->LaunchCharacter(FVector(0, 0, HoverLiftImpulse), false, false);
+		}
+		else if (Move->Velocity.Z < 80.f)
+		{
+			Move->Velocity.Z = 80.f;
+		}
+	}
+	else
+	{
+		if (bOnGround)
+		{
+			Move->SetMovementMode(MOVE_Falling);
+			OwnerCharacter->LaunchCharacter(FVector(0, 0, HoverLiftImpulse), false, false);
+		}
+		Move->GravityScale = GravityScaleWhileHover;
+	}
 }
 
 void UGA_Hover_Enemy::StopHover()
 {
-    if (!OwnerCharacter.IsValid()) return;
+	if (!OwnerCharacter.IsValid()) return;
 
-    UCharacterMovementComponent* Move = OwnerCharacter->GetCharacterMovement();
-    if (!Move) return;
+	UCharacterMovementComponent* Move = OwnerCharacter->GetCharacterMovement();
+	if (!Move) return;
 
-    if (bUseFlyingMode)
-    {
-        Move->SetMovementMode(MOVE_Falling);
-        Move->GravityScale = ExitFallGravityScale;
-    }
-    else
-    {
-        Move->GravityScale = SavedGravityScale;
-    }
+	// ========== Hover Particle 비활성화 ==========
+	if (AEnemyMecha* EnemyMecha = Cast<AEnemyMecha>(OwnerCharacter.Get()))
+	{
+		EnemyMecha->DeactivateHoverParticles();
+	}
 
-    Move->BrakingFrictionFactor = SavedBrakingFrictionFactor;
-    Move->GroundFriction = SavedGroundFriction;
+	if (bUseFlyingMode)
+	{
+		Move->SetMovementMode(MOVE_Falling);
+		Move->GravityScale = ExitFallGravityScale;
+	}
+	else
+	{
+		Move->GravityScale = SavedGravityScale;
+	}
+
+	Move->BrakingFrictionFactor = SavedBrakingFrictionFactor;
+	Move->GroundFriction = SavedGroundFriction;
 }
 
 void UGA_Hover_Enemy::OnHoverDurationEnded()

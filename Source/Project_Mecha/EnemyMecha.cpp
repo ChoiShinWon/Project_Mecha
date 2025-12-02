@@ -25,6 +25,7 @@
 #include "EnemyHUDWidget.h"
 #include "Blueprint/UserWidget.h"
 #include "Animation/AnimInstance.h"
+#include "Particles/ParticleSystemComponent.h"
 
 // ========================================
 // 생성자
@@ -64,6 +65,12 @@ AEnemyMecha::AEnemyMecha()
 	// ========== HitReact 기본값 ==========
 	HitReactInterval = 0.4f;
 	bCanPlayHitReact = true;
+
+	// ========== Hover Particle 소켓 기본값 ==========
+	// 기본적으로 발 양쪽 소켓에 파티클 생성
+	// 블루프린트에서 필요에 따라 변경 가능
+	HoverParticleSockets.Add(TEXT("LeftFootSocket"));
+	HoverParticleSockets.Add(TEXT("RightFootSocket"));
 }
 
 // ========================================
@@ -161,6 +168,38 @@ void AEnemyMecha::BeginPlay()
 		if (UEnemyHUDWidget* EnemyHUD = Cast<UEnemyHUDWidget>(WidgetObject))
 		{
 			EnemyHUD->InitWithASC(AbilitySystem, AttributeSet);
+		}
+	}
+
+	// ========== Hover Particle 컴포넌트 동적 생성 ==========
+	if (HoverParticleSystem && GetMesh())
+	{
+		for (const FName& SocketName : HoverParticleSockets)
+		{
+			// 소켓이 존재하는지 확인
+			if (GetMesh()->DoesSocketExist(SocketName))
+			{
+				// 파티클 컴포넌트 생성
+				UParticleSystemComponent* ParticleComp = NewObject<UParticleSystemComponent>(this);
+				if (ParticleComp)
+				{
+					ParticleComp->SetTemplate(HoverParticleSystem);
+					ParticleComp->bAutoActivate = false;  // 기본적으로 비활성화
+					ParticleComp->SetupAttachment(GetMesh(), SocketName);
+					ParticleComp->SetRelativeScale3D(HoverParticleScale);  // 스케일 적용
+					ParticleComp->SetRelativeRotation(HoverParticleRotation);  // 회전 적용
+					ParticleComp->RegisterComponent();
+
+					HoverParticleComponents.Add(ParticleComp);
+
+					UE_LOG(LogTemp, Log, TEXT("AEnemyMecha: Created hover particle at socket %s with scale %s and rotation %s"), 
+						*SocketName.ToString(), *HoverParticleScale.ToString(), *HoverParticleRotation.ToString());
+				}
+			}
+			else
+			{
+				UE_LOG(LogTemp, Warning, TEXT("AEnemyMecha: Socket %s does not exist on %s"), *SocketName.ToString(), *GetName());
+			}
 		}
 	}
 
@@ -462,4 +501,68 @@ void AEnemyMecha::FireHoverAbility()
 		return;
 
 	AbilitySystem->TryActivateAbilityByClass(HoverAbilityClass_Enemy);
+}
+
+// ========================================
+// Hover Particle 제어
+// ========================================
+
+// 호버 파티클 활성화
+void AEnemyMecha::ActivateHoverParticles()
+{
+	for (UParticleSystemComponent* ParticleComp : HoverParticleComponents)
+	{
+		if (ParticleComp && !ParticleComp->IsActive())
+		{
+			ParticleComp->Activate(true);
+			UE_LOG(LogTemp, Log, TEXT("AEnemyMecha: Activated hover particle on %s"), *GetName());
+		}
+	}
+}
+
+// 호버 파티클 비활성화
+void AEnemyMecha::DeactivateHoverParticles()
+{
+	for (UParticleSystemComponent* ParticleComp : HoverParticleComponents)
+	{
+		if (ParticleComp && ParticleComp->IsActive())
+		{
+			ParticleComp->Deactivate();
+			UE_LOG(LogTemp, Log, TEXT("AEnemyMecha: Deactivated hover particle on %s"), *GetName());
+		}
+	}
+}
+
+// 호버 파티클 스케일 변경
+void AEnemyMecha::SetHoverParticleScale(FVector NewScale)
+{
+	HoverParticleScale = NewScale;
+
+	// 이미 생성된 파티클 컴포넌트들의 스케일도 업데이트
+	for (UParticleSystemComponent* ParticleComp : HoverParticleComponents)
+	{
+		if (ParticleComp)
+		{
+			ParticleComp->SetRelativeScale3D(NewScale);
+			UE_LOG(LogTemp, Log, TEXT("AEnemyMecha: Updated hover particle scale to %s on %s"), 
+				*NewScale.ToString(), *GetName());
+		}
+	}
+}
+
+// 호버 파티클 회전 변경
+void AEnemyMecha::SetHoverParticleRotation(FRotator NewRotation)
+{
+	HoverParticleRotation = NewRotation;
+
+	// 이미 생성된 파티클 컴포넌트들의 회전도 업데이트
+	for (UParticleSystemComponent* ParticleComp : HoverParticleComponents)
+	{
+		if (ParticleComp)
+		{
+			ParticleComp->SetRelativeRotation(NewRotation);
+			UE_LOG(LogTemp, Log, TEXT("AEnemyMecha: Updated hover particle rotation to %s on %s"), 
+				*NewRotation.ToString(), *GetName());
+		}
+	}
 }

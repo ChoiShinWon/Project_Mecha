@@ -319,7 +319,7 @@ void AMechaCharacterBase::OnEnergyChanged(const FOnAttributeChangeData& Data)
                 }
 
                 OverheatParticleComponent->Activate(true);
-                UE_LOG(LogTemp, Log, TEXT("[VFX] Overheat Particle Activated"));
+                
             }
         }
 

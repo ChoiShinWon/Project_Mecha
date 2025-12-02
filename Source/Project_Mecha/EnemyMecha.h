@@ -71,6 +71,43 @@ public:
     UPROPERTY(BlueprintReadWrite, Category = "Hover")
     bool bHoverOnCooldown = false;  // true면 아직 다음 Hover 못씀
 
+    // === Hover Particle System ===
+    // 호버 사용 시 표시할 파티클 시스템 (블루프린트에서 설정)
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hover|VFX")
+    class UParticleSystem* HoverParticleSystem;
+
+    // 호버 파티클이 부착될 소켓 이름들 (여러 개 가능, 예: 발 양쪽)
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hover|VFX")
+    TArray<FName> HoverParticleSockets;
+
+    // 호버 파티클 스케일 (크기 조정)
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hover|VFX")
+    FVector HoverParticleScale = FVector(1.0f, 1.0f, 1.0f);
+
+    // 호버 파티클 회전 (Rotation 조정)
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hover|VFX")
+    FRotator HoverParticleRotation = FRotator(0.0f, 0.0f, 0.0f);
+
+    // 호버 파티클 컴포넌트들
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Hover|VFX")
+    TArray<class UParticleSystemComponent*> HoverParticleComponents;
+
+public:
+    // 호버 파티클 활성화/비활성화 함수
+    UFUNCTION(BlueprintCallable, Category = "Enemy|Hover")
+    void ActivateHoverParticles();
+
+    UFUNCTION(BlueprintCallable, Category = "Enemy|Hover")
+    void DeactivateHoverParticles();
+
+    // 호버 파티클 스케일 변경 (런타임에 호출 가능)
+    UFUNCTION(BlueprintCallable, Category = "Enemy|Hover")
+    void SetHoverParticleScale(FVector NewScale);
+
+    // 호버 파티클 회전 변경 (런타임에 호출 가능)
+    UFUNCTION(BlueprintCallable, Category = "Enemy|Hover")
+    void SetHoverParticleRotation(FRotator NewRotation);
+
 protected:
 
     // 플레이어와 같은 AttributeSet 사용 (Health, MaxHealth 등)
