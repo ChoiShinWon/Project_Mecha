@@ -109,32 +109,34 @@ protected:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI|Energy")
     float WarningThreshold = 0.3f;     // 30~60%: 경고
 
+    // === 아머드 코어 스타일: 하얀색 통일 ===
+    // Armored Core Style: White unified colors
+    
+    // 에너지바 색상 - 전부 하얀색
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI|Energy")
-    FLinearColor ColorHigh = FLinearColor(0.0f, 0.9f, 0.1f, 1.f);
+    FLinearColor ColorHigh = FLinearColor(1.0f, 1.0f, 1.0f, 1.f);    // 하얀색
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI|Energy")
-    FLinearColor ColorMid = FLinearColor(1.0f, 0.7f, 0.0f, 1.f);
+    FLinearColor ColorMid = FLinearColor(1.0f, 1.0f, 1.0f, 1.f);     // 하얀색
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI|Energy")
-    FLinearColor ColorLow = FLinearColor(0.9f, 0.05f, 0.05f, 1.f);
+    FLinearColor ColorLow = FLinearColor(1.0f, 0.3f, 0.3f, 1.f);     // 위험 시 약간 빨강 틴트
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI|Health")
-    float HealthCautionThreshold = 0.6f;   // 60% 이상: 초록
+    float HealthCautionThreshold = 0.6f;   // 60% 이상
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI|Health")
-    float HealthWarningThreshold = 0.3f;   // 30~60%: 노랑
+    float HealthWarningThreshold = 0.3f;   // 30~60%
 
-    // 풀피 구간: 쨍한 초록
+    // 체력바 색상 - 전부 하얀색
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI|Health")
-    FLinearColor HealthColorHigh = FLinearColor(0.0f, 0.9f, 0.1f, 1.f);
+    FLinearColor HealthColorHigh = FLinearColor(1.0f, 1.0f, 1.0f, 1.f);    // 하얀색
 
-    // 중간 구간: 진한 노랑-주황
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI|Health")
-    FLinearColor HealthColorMid = FLinearColor(1.0f, 0.7f, 0.0f, 1.f);
+    FLinearColor HealthColorMid = FLinearColor(1.0f, 1.0f, 1.0f, 1.f);     // 하얀색
 
-    // 위기 구간: 진한 빨강
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI|Health")
-    FLinearColor HealthColorLow = FLinearColor(0.9f, 0.05f, 0.05f, 1.f);
+    FLinearColor HealthColorLow = FLinearColor(1.0f, 0.3f, 0.3f, 1.f);     // 위험 시 약간 빨강 틴트
 
     /** 에너지/기타 Attribute 리스너를 BP에서 묶어주는 이벤트 */
     UFUNCTION(BlueprintImplementableEvent)
