@@ -16,6 +16,7 @@ class UEnemyHUDWidget;
 class UWidgetComponent;
 class AMissionManager;
 class UAnimMontage;
+class UBossHealthWidget;
 struct FOnAttributeChangeData;
 
 UCLASS()
@@ -70,6 +71,22 @@ public:
 
     UPROPERTY(BlueprintReadWrite, Category = "Hover")
     bool bHoverOnCooldown = false;  // true면 아직 다음 Hover 못씀
+
+    // === 보스 관련 변수 ===
+    // 이 적이 보스인지 여부 (블루프린트에서 설정)
+    // Whether this enemy is a boss (set in Blueprint)
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss")
+    bool bIsBoss = false;
+
+    // 보스 이름 (화면에 표시)
+    // Boss name (displayed on screen)
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss")
+    FText BossName = FText::FromString(TEXT("BOSS"));
+
+    // 보스 체력바 위젯 클래스 (블루프린트에서 설정)
+    // Boss health bar widget class (set in Blueprint)
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boss")
+    TSubclassOf<UBossHealthWidget> BossHealthWidgetClass;
 
     // === Hover Particle System ===
     // 호버 사용 시 표시할 파티클 시스템 (블루프린트에서 설정)
@@ -171,8 +188,21 @@ protected:
     UPROPERTY()
     AMissionManager* MissionManager = nullptr;
 
+    // 보스 체력바 위젯 인스턴스
+    // Boss health bar widget instance
+    UPROPERTY()
+    UBossHealthWidget* BossHealthWidget = nullptr;
+
 protected:
     virtual void BeginPlay() override;
+
+    // 보스 체력바 생성
+    // Create boss health bar widget
+    void CreateBossHealthWidget();
+
+    // 보스 체력바 업데이트
+    // Update boss health bar widget
+    void UpdateBossHealthWidget(float NewHealth, float MaxHealth);
 
     // 스탯 초기화 (BeginPlay에서 한 번 호출)
     void InitializeAttributes();

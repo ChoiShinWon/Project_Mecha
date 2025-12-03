@@ -23,6 +23,7 @@
 
 #include "Components/WidgetComponent.h"
 #include "EnemyHUDWidget.h"
+#include "BossHealthWidget.h"
 #include "Blueprint/UserWidget.h"
 #include "Animation/AnimInstance.h"
 #include "Particles/ParticleSystemComponent.h"
@@ -149,10 +150,16 @@ void AEnemyMecha::BeginPlay()
 	// 스폰 위치 저장 (AI 패트롤 기준점)
 	HomeLocation = GetActorLocation();
 
-	// 스탯 초기화
-	InitializeAttributes();
+    // 스탯 초기화
+    InitializeAttributes();
 
-	// ========== 체력 변경 델리게이트 바인딩 ==========
+    // ========== 보스 체력바 생성 ==========
+    if (bIsBoss)
+    {
+        CreateBossHealthWidget();
+    }
+
+    // ========== 체력 변경 델리게이트 바인딩 ==========
 	if (AbilitySystem && AttributeSet)
 	{
 		HealthChangedHandle =
@@ -298,19 +305,26 @@ void AEnemyMecha::HandleDeath()
 		}
 	}
 
-	// ========== HUD 정리 ==========
-	if (EnemyHUDWidgetComp)
-	{
-		if (UUserWidget* WidgetObject = EnemyHUDWidgetComp->GetUserWidgetObject())
-		{
-			if (UEnemyHUDWidget* EnemyHUD = Cast<UEnemyHUDWidget>(WidgetObject))
-			{
-				EnemyHUD->OnOwnerDead();
-			}
-		}
-	}
+    // ========== HUD 정리 ==========
+    if (EnemyHUDWidgetComp)
+    {
+        if (UUserWidget* WidgetObject = EnemyHUDWidgetComp->GetUserWidgetObject())
+        {
+            if (UEnemyHUDWidget* EnemyHUD = Cast<UEnemyHUDWidget>(WidgetObject))
+            {
+                EnemyHUD->OnOwnerDead();
+            }
+        }
+    }
 
-	// ========== 미션 매니저에 킬 보고 ==========
+    // ========== 보스 체력바 정리 ==========
+    if (bIsBoss && BossHealthWidget)
+    {
+        BossHealthWidget->OnBossDead();
+        BossHealthWidget = nullptr;
+    }
+
+    // ========== 미션 매니저에 킬 보고 ==========
 	if (MissionManager)
 	{
 		MissionManager->NotifyEnemyKilled(this);
@@ -325,23 +339,29 @@ void AEnemyMecha::HandleDeath()
 // ========================================
 void AEnemyMecha::OnHealthChanged(const FOnAttributeChangeData& Data)
 {
-	const float NewHealth = Data.NewValue;
-	const float MaxHealth = AttributeSet ? AttributeSet->GetMaxHealth() : 1.f;
+    const float NewHealth = Data.NewValue;
+    const float MaxHealth = AttributeSet ? AttributeSet->GetMaxHealth() : 1.f;
 
-	// ========== HUD 체력바 업데이트 ==========
-	if (EnemyHUDWidgetComp)
-	{
-		if (UUserWidget* WidgetObject = EnemyHUDWidgetComp->GetUserWidgetObject())
-		{
-			if (UEnemyHUDWidget* EnemyHUD = Cast<UEnemyHUDWidget>(WidgetObject))
-			{
-				EnemyHUD->ApplyHealth(NewHealth, MaxHealth);
-			}
-		}
-	}
+    // ========== HUD 체력바 업데이트 ==========
+    if (EnemyHUDWidgetComp)
+    {
+        if (UUserWidget* WidgetObject = EnemyHUDWidgetComp->GetUserWidgetObject())
+        {
+            if (UEnemyHUDWidget* EnemyHUD = Cast<UEnemyHUDWidget>(WidgetObject))
+            {
+                EnemyHUD->ApplyHealth(NewHealth, MaxHealth);
+            }
+        }
+    }
 
-	// 이미 죽었으면 더 처리 안 함
-	if (bIsDead)
+    // ========== 보스 체력바 업데이트 ==========
+    if (bIsBoss)
+    {
+        UpdateBossHealthWidget(NewHealth, MaxHealth);
+    }
+
+    // 이미 죽었으면 더 처리 안 함
+    if (bIsDead)
 	{
 		return;
 	}
@@ -553,16 +573,68 @@ void AEnemyMecha::SetHoverParticleScale(FVector NewScale)
 // 호버 파티클 회전 변경
 void AEnemyMecha::SetHoverParticleRotation(FRotator NewRotation)
 {
-	HoverParticleRotation = NewRotation;
+    HoverParticleRotation = NewRotation;
 
-	// 이미 생성된 파티클 컴포넌트들의 회전도 업데이트
-	for (UParticleSystemComponent* ParticleComp : HoverParticleComponents)
-	{
-		if (ParticleComp)
-		{
-			ParticleComp->SetRelativeRotation(NewRotation);
-			UE_LOG(LogTemp, Log, TEXT("AEnemyMecha: Updated hover particle rotation to %s on %s"), 
-				*NewRotation.ToString(), *GetName());
-		}
-	}
+    // 이미 생성된 파티클 컴포넌트들의 회전도 업데이트
+    for (UParticleSystemComponent* ParticleComp : HoverParticleComponents)
+    {
+        if (ParticleComp)
+        {
+            ParticleComp->SetRelativeRotation(NewRotation);
+            UE_LOG(LogTemp, Log, TEXT("AEnemyMecha: Updated hover particle rotation to %s on %s"), 
+                *NewRotation.ToString(), *GetName());
+        }
+    }
+}
+
+// ========================================
+// 보스 체력바 위젯 생성
+// Create boss health bar widget
+// ========================================
+void AEnemyMecha::CreateBossHealthWidget()
+{
+    if (!bIsBoss || !BossHealthWidgetClass)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("AEnemyMecha::CreateBossHealthWidget - bIsBoss=%d, BossHealthWidgetClass=%s on %s"),
+            bIsBoss, BossHealthWidgetClass ? TEXT("Valid") : TEXT("Null"), *GetName());
+        return;
+    }
+
+    // 플레이어 컨트롤러 찾기
+    APlayerController* PC = UGameplayStatics::GetPlayerController(GetWorld(), 0);
+    if (!PC)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("AEnemyMecha::CreateBossHealthWidget - No PlayerController found"));
+        return;
+    }
+
+    // 위젯 생성
+    BossHealthWidget = CreateWidget<UBossHealthWidget>(PC, BossHealthWidgetClass);
+    if (BossHealthWidget)
+    {
+        // 뷰포트에 추가 (ZOrder를 높게 설정하여 다른 UI 위에 표시)
+        BossHealthWidget->AddToViewport(100);
+
+        // ASC와 AttributeSet으로 초기화
+        BossHealthWidget->InitWithBoss(AbilitySystem, AttributeSet, BossName);
+        BossHealthWidget->ShowBossHealth();
+
+        UE_LOG(LogTemp, Log, TEXT("AEnemyMecha: Boss health widget created for %s"), *GetName());
+    }
+    else
+    {
+        UE_LOG(LogTemp, Warning, TEXT("AEnemyMecha::CreateBossHealthWidget - Failed to create widget for %s"), *GetName());
+    }
+}
+
+// ========================================
+// 보스 체력바 업데이트
+// Update boss health bar widget
+// ========================================
+void AEnemyMecha::UpdateBossHealthWidget(float NewHealth, float MaxHealth)
+{
+    if (BossHealthWidget)
+    {
+        BossHealthWidget->ApplyHealth(NewHealth, MaxHealth);
+    }
 }
