@@ -324,14 +324,26 @@ void AEnemyMecha::HandleDeath()
         BossHealthWidget = nullptr;
     }
 
+    // ========== 보스 사망 슬로우 모션 ==========
+    if (bIsBoss && bUseDeathSlowMotion)
+    {
+        StartDeathSlowMotion();
+    }
+
     // ========== 미션 매니저에 킬 보고 ==========
 	if (MissionManager)
 	{
 		MissionManager->NotifyEnemyKilled(this);
 	}
 
-	// 1초 후 제거
-	SetLifeSpan(1.0f);
+	// 슬로우 모션 사용 시 제거 시간 조정
+	float DestroyDelay = 1.0f;
+	if (bIsBoss && bUseDeathSlowMotion)
+	{
+		// 슬로우 모션 지속 시간 + 여유 시간
+		DestroyDelay = DeathSlowMotionDuration + 0.5f;
+	}
+	SetLifeSpan(DestroyDelay);
 }
 
 // ========================================
@@ -637,4 +649,53 @@ void AEnemyMecha::UpdateBossHealthWidget(float NewHealth, float MaxHealth)
     {
         BossHealthWidget->ApplyHealth(NewHealth, MaxHealth);
     }
+}
+
+// ========================================
+// 보스 사망 슬로우 모션 시작
+// Start boss death slow motion
+// ========================================
+void AEnemyMecha::StartDeathSlowMotion()
+{
+    UWorld* World = GetWorld();
+    if (!World)
+    {
+        return;
+    }
+
+    // 전역 시간 배율 설정 (슬로우 모션)
+    UGameplayStatics::SetGlobalTimeDilation(World, DeathSlowMotionScale);
+
+    UE_LOG(LogTemp, Log, TEXT("AEnemyMecha: Boss death slow motion started (Scale: %f, Duration: %f)"), 
+        DeathSlowMotionScale, DeathSlowMotionDuration);
+
+    // 실제 시간 기준으로 타이머 설정 (슬로우 모션 영향 안 받음)
+    // TimerRate = Duration * Scale (슬로우 상태에서의 실제 경과 시간)
+    const float RealTimeDuration = DeathSlowMotionDuration * DeathSlowMotionScale;
+
+    World->GetTimerManager().SetTimer(
+        TimerHandle_SlowMotionRestore,
+        this,
+        &AEnemyMecha::RestoreNormalTime,
+        RealTimeDuration,
+        false
+    );
+}
+
+// ========================================
+// 슬로우 모션 복원 (원래 속도로)
+// Restore normal time
+// ========================================
+void AEnemyMecha::RestoreNormalTime()
+{
+    UWorld* World = GetWorld();
+    if (!World)
+    {
+        return;
+    }
+
+    // 전역 시간 배율을 1.0 (정상)으로 복원
+    UGameplayStatics::SetGlobalTimeDilation(World, 1.0f);
+
+    UE_LOG(LogTemp, Log, TEXT("AEnemyMecha: Boss death slow motion ended, normal time restored"));
 }

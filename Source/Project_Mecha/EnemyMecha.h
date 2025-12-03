@@ -88,6 +88,22 @@ public:
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boss")
     TSubclassOf<UBossHealthWidget> BossHealthWidgetClass;
 
+    // === 보스 사망 슬로우 모션 ===
+    // 보스 사망 시 슬로우 모션 사용 여부
+    // Whether to use slow motion when boss dies
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|SlowMotion")
+    bool bUseDeathSlowMotion = true;
+
+    // 슬로우 모션 시간 배율 (0.1 = 10% 속도)
+    // Slow motion time dilation (0.1 = 10% speed)
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|SlowMotion", meta = (ClampMin = "0.01", ClampMax = "1.0"))
+    float DeathSlowMotionScale = 0.2f;
+
+    // 슬로우 모션 지속 시간 (초)
+    // Slow motion duration (seconds)
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|SlowMotion", meta = (ClampMin = "0.1", ClampMax = "5.0"))
+    float DeathSlowMotionDuration = 1.5f;
+
     // === Hover Particle System ===
     // 호버 사용 시 표시할 파티클 시스템 (블루프린트에서 설정)
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hover|VFX")
@@ -181,6 +197,9 @@ protected:
     // HitReact 간격 관리용 타이머
     FTimerHandle TimerHandle_HitReactInterval;
 
+    // 슬로우 모션 복원용 타이머
+    FTimerHandle TimerHandle_SlowMotionRestore;
+
     // === Enemy HUD 위젯 컴포넌트 ===
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UI", meta = (AllowPrivateAccess = "true"))
     UWidgetComponent* EnemyHUDWidgetComp;
@@ -220,6 +239,12 @@ protected:
     // HitReact 쿨타임 리셋
     UFUNCTION()
     void ResetHitReactWindow();
+
+    // 슬로우 모션 시작/복원
+    void StartDeathSlowMotion();
+    
+    UFUNCTION()
+    void RestoreNormalTime();
 
 public:
     // === Getter 함수들 ===
