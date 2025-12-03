@@ -230,11 +230,20 @@ protected:
     bool bIsDead = false;
 
     FDelegateHandle HealthChangedHandle;
+    FTimerHandle TimerHandle_DeathDestroy;
 
     // 델리게이트 콜백
     void OnHealthChanged(const FOnAttributeChangeData& Data);
 
     void HandleDeath();
+
+    // Death Montage 종료 후 제거 (델리게이트용)
+    UFUNCTION()
+    void OnDeathMontageEnded(UAnimMontage* Montage, bool bInterrupted);
+
+    // Montage 종료 후 지연 제거
+    UFUNCTION()
+    void DestroyAfterDelay();
 
     // HitReact 쿨타임 리셋
     UFUNCTION()

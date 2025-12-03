@@ -301,8 +301,17 @@ void AEnemyMecha::HandleDeath()
 	{
 		if (UAnimInstance* AnimInst = GetMesh()->GetAnimInstance())
 		{
+			// Montage 재생
 			AnimInst->Montage_Play(DeathMontage);
+
+			// Montage 블렌드 아웃 시작 시 이벤트 바인딩 (더 빠른 타이밍)
+			AnimInst->OnMontageBlendingOut.AddDynamic(this, &AEnemyMecha::OnDeathMontageEnded);
 		}
+	}
+	else
+	{
+		// Montage가 없으면 바로 제거
+		SetLifeSpan(0.1f);
 	}
 
     // ========== HUD 정리 ==========
@@ -335,15 +344,6 @@ void AEnemyMecha::HandleDeath()
 	{
 		MissionManager->NotifyEnemyKilled(this);
 	}
-
-	// 슬로우 모션 사용 시 제거 시간 조정
-	float DestroyDelay = 1.0f;
-	if (bIsBoss && bUseDeathSlowMotion)
-	{
-		// 슬로우 모션 지속 시간 + 여유 시간
-		DestroyDelay = DeathSlowMotionDuration + 0.5f;
-	}
-	SetLifeSpan(DestroyDelay);
 }
 
 // ========================================
@@ -666,9 +666,6 @@ void AEnemyMecha::StartDeathSlowMotion()
     // 전역 시간 배율 설정 (슬로우 모션)
     UGameplayStatics::SetGlobalTimeDilation(World, DeathSlowMotionScale);
 
-    UE_LOG(LogTemp, Log, TEXT("AEnemyMecha: Boss death slow motion started (Scale: %f, Duration: %f)"), 
-        DeathSlowMotionScale, DeathSlowMotionDuration);
-
     // 실제 시간 기준으로 타이머 설정 (슬로우 모션 영향 안 받음)
     // TimerRate = Duration * Scale (슬로우 상태에서의 실제 경과 시간)
     const float RealTimeDuration = DeathSlowMotionDuration * DeathSlowMotionScale;
@@ -698,4 +695,47 @@ void AEnemyMecha::RestoreNormalTime()
     UGameplayStatics::SetGlobalTimeDilation(World, 1.0f);
 
     UE_LOG(LogTemp, Log, TEXT("AEnemyMecha: Boss death slow motion ended, normal time restored"));
+}
+
+// ========================================
+// Death Montage 종료 콜백
+// Death montage ended callback
+// ========================================
+void AEnemyMecha::OnDeathMontageEnded(UAnimMontage* Montage, bool bInterrupted)
+{
+    // Death Montage가 종료되면
+    if (Montage == DeathMontage)
+    {
+        // 델리게이트 해제
+        if (UAnimInstance* AnimInst = GetMesh()->GetAnimInstance())
+        {
+            AnimInst->OnMontageBlendingOut.RemoveDynamic(this, &AEnemyMecha::OnDeathMontageEnded);
+        }
+
+        // 애니메이션 일시정지 - 마지막 포즈(죽은 포즈) 유지
+        // Idle로 돌아가지 않음
+        if (GetMesh())
+        {
+            GetMesh()->bPauseAnims = true;
+        }
+
+
+		Destroy();
+    }
+}
+
+// ========================================
+// 지연 후 제거 (사용하지 않음, 나중을 위해 보관)
+// Destroy after delay (not used, kept for future use)
+// ========================================
+void AEnemyMecha::DestroyAfterDelay()
+{
+    // 타이머 핸들 해제
+    if (UWorld* World = GetWorld())
+    {
+        World->GetTimerManager().ClearTimer(TimerHandle_DeathDestroy);
+    }
+
+    // 제거
+    Destroy();
 }
