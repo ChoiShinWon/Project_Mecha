@@ -66,12 +66,6 @@ void UGA_Attack::EndAbility(
 	bool bReplicateEndAbility, bool bWasCancelled)
 {
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
-
-	// 필요 시 태그 정리 등
-	if (const UAbilitySystemComponent* ASC = ActorInfo ? ActorInfo->AbilitySystemComponent.Get() : nullptr)
-	{
-		// 추가 정리 작업
-	}
 }
 
 // ========================================
@@ -84,7 +78,7 @@ void UGA_Attack::PerformAttackTrace(AActor* SourceActor)
 	if (!World) return;
 
 	// ========== 구체 스윕 트레이스 ==========
-	const FVector Start = SourceActor->GetActorLocation() + FVector(0, 0, 50);  // 캐릭터 중심에서 약간 위
+	const FVector Start = SourceActor->GetActorLocation() + FVector(0, 0, TraceStartZOffset);
 	const FVector End = Start + (SourceActor->GetActorForwardVector() * AttackRange);  // 전방으로
 
 	FHitResult Hit;

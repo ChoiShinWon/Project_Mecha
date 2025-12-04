@@ -569,7 +569,6 @@ void AEnemyMecha::SetHoverParticleRotation(FRotator NewRotation)
 
 // ========================================
 // 보스 체력바 위젯 생성
-// Create boss health bar widget
 // ========================================
 void AEnemyMecha::CreateBossHealthWidget()
 {
@@ -600,7 +599,6 @@ void AEnemyMecha::CreateBossHealthWidget()
 
 // ========================================
 // 보스 체력바 업데이트
-// Update boss health bar widget
 // ========================================
 void AEnemyMecha::UpdateBossHealthWidget(float NewHealth, float MaxHealth)
 {
@@ -612,7 +610,6 @@ void AEnemyMecha::UpdateBossHealthWidget(float NewHealth, float MaxHealth)
 
 // ========================================
 // 보스 사망 슬로우 모션 시작
-// Start boss death slow motion
 // ========================================
 void AEnemyMecha::StartDeathSlowMotion()
 {
@@ -640,7 +637,6 @@ void AEnemyMecha::StartDeathSlowMotion()
 
 // ========================================
 // 슬로우 모션 복원 (원래 속도로)
-// Restore normal time
 // ========================================
 void AEnemyMecha::RestoreNormalTime()
 {
@@ -656,7 +652,6 @@ void AEnemyMecha::RestoreNormalTime()
 
 // ========================================
 // Death Montage 종료 콜백
-// Death montage ended callback
 // ========================================
 void AEnemyMecha::OnDeathMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {

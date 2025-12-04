@@ -78,33 +78,27 @@ public:
 
     // === 보스 관련 변수 ===
     // 이 적이 보스인지 여부 (블루프린트에서 설정)
-    // Whether this enemy is a boss (set in Blueprint)
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss")
     bool bIsBoss = false;
 
     // 보스 이름 (화면에 표시)
-    // Boss name (displayed on screen)
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss")
     FText BossName = FText::FromString(TEXT("BOSS"));
 
     // 보스 체력바 위젯 클래스 (블루프린트에서 설정)
-    // Boss health bar widget class (set in Blueprint)
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boss")
     TSubclassOf<UBossHealthWidget> BossHealthWidgetClass;
 
     // === 보스 사망 슬로우 모션 ===
     // 보스 사망 시 슬로우 모션 사용 여부
-    // Whether to use slow motion when boss dies
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|SlowMotion")
     bool bUseDeathSlowMotion = true;
 
     // 슬로우 모션 시간 배율 (0.1 = 10% 속도)
-    // Slow motion time dilation (0.1 = 10% speed)
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|SlowMotion", meta = (ClampMin = "0.01", ClampMax = "1.0"))
     float DeathSlowMotionScale = 0.2f;
 
     // 슬로우 모션 지속 시간 (초)
-    // Slow motion duration (seconds)
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|SlowMotion", meta = (ClampMin = "0.1", ClampMax = "5.0"))
     float DeathSlowMotionDuration = 1.5f;
 
@@ -212,7 +206,6 @@ protected:
     AMissionManager* MissionManager = nullptr;
 
     // 보스 체력바 위젯 인스턴스
-    // Boss health bar widget instance
     UPROPERTY()
     UBossHealthWidget* BossHealthWidget = nullptr;
 
@@ -220,11 +213,9 @@ protected:
     virtual void BeginPlay() override;
 
     // 보스 체력바 생성
-    // Create boss health bar widget
     void CreateBossHealthWidget();
 
     // 보스 체력바 업데이트
-    // Update boss health bar widget
     void UpdateBossHealthWidget(float NewHealth, float MaxHealth);
 
     // 스탯 초기화 (BeginPlay에서 한 번 호출)

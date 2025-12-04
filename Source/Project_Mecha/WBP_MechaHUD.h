@@ -3,11 +3,6 @@
 // - 플레이어 HUD 위젯 클래스.
 // - 에너지 바, 체력 바, 탄약 정보(탄창/예비탄)를 표시한다.
 // - ASC와 AttributeSet을 통해 Attribute 변화를 자동 감지하여 UI를 갱신한다.
-//
-// Description:
-// - Player HUD widget class.
-// - Displays energy bar, health bar, ammo info (magazine/reserve).
-// - Automatically detects Attribute changes via ASC and AttributeSet to update UI.
 
 #pragma once
 
@@ -25,10 +20,6 @@ class UWidgetAnimation;
 // 설명:
 // - 플레이어 HUD 위젯. 에너지, 체력, 탄약 UI를 관리한다.
 // - InitWithASC 호출 시 ASC와 AttributeSet을 바인딩하여 자동 갱신.
-//
-// Description:
-// - Player HUD widget. Manages energy, health, and ammo UI.
-// - Binds ASC and AttributeSet on InitWithASC call for automatic updates.
 UCLASS()
 class PROJECT_MECHA_API UWBP_MechaHUD : public UUserWidget
 {
@@ -110,8 +101,6 @@ protected:
     float WarningThreshold = 0.3f;     // 30~60%: 경고
 
     // === 아머드 코어 스타일: 하얀색 통일 ===
-    // Armored Core Style: White unified colors
-    
     // 에너지바 색상 - 전부 하얀색
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI|Energy")
     FLinearColor ColorHigh = FLinearColor(1.0f, 1.0f, 1.0f, 1.f);    // 하얀색

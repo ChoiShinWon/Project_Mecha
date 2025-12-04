@@ -275,7 +275,7 @@ private:
     UPROPERTY(EditDefaultsOnly, Category = "GAS|Energy")
     float OverheatLockout = 5.0f;
 
-    // Input handlers (이동/룩/점프만—부스트는 GA로)
+    // Input handlers (이동/룩/점프만 - 부스트는 GA로)
     void Input_Move(const FInputActionValue& Value);
     void Input_Look(const FInputActionValue& Value);
     void Input_JumpStart(const FInputActionValue& Value);
