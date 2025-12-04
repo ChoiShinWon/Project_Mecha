@@ -68,7 +68,7 @@ public:
     virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 protected:
-    virtual void OnMovementModeChanged(EMovementMode PrevMovementMode, uint8 PreviousCustomMode = 0) override;
+   
 
     // ---- Components ----
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")

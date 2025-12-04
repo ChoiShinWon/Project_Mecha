@@ -180,6 +180,7 @@ void AMechaCharacterBase::BeginPlay()
         {
             if (!MechaHUDWidget)
             {
+                // Mecha_HUD 위젯 생성
                 MechaHUDWidget = CreateWidget<UWBP_MechaHUD>(PC, HUDWidgetClass);
             }
 
@@ -239,6 +240,7 @@ void AMechaCharacterBase::InitASCOnce()
 
     // ========== 시작 능력 부여 ==========
     {
+        // 플레이어 캐릭터 BP 에 있는 StartupAbilities 인덱스로 능력 부여
         for (int32 i = 0; i < StartupAbilities.Num(); ++i)
         {
             if (TSubclassOf<UGameplayAbility> GAClass = StartupAbilities[i])
@@ -372,6 +374,7 @@ void AMechaCharacterBase::Input_JumpStop(const FInputActionValue&)
 
 void AMechaCharacterBase::Input_SprintStart(const FInputActionValue&)
 {
+    // QuickBoost 어빌리티 눌림
     if (AbilitySystem)
         AbilitySystem->AbilityLocalInputPressed((int32)EMechaAbilityInputID::QuickBoost);
 }
@@ -384,6 +387,7 @@ void AMechaCharacterBase::Input_SprintStop(const FInputActionValue&)
 
 void AMechaCharacterBase::Input_BoostMode_Pressed(const FInputActionValue&)
 {
+    // BoostMode 어빌리티 눌림
     if (AbilitySystem)
         AbilitySystem->AbilityLocalInputPressed((int32)EMechaAbilityInputID::BoostMode);
 }
@@ -472,28 +476,6 @@ void AMechaCharacterBase::SetupPlayerInputComponent(UInputComponent* PlayerInput
     }
 }
 
-// ========================================
-// 이동 모드 변경 감지
-// ========================================
-void AMechaCharacterBase::OnMovementModeChanged(EMovementMode PrevMovementMode, uint8 PreviousCustomMode)
-{
-    Super::OnMovementModeChanged(PrevMovementMode, PreviousCustomMode);
-
-    if (!AbilitySystem) return;
-
-    // 호버링 중인데 Flying 모드가 아니면 강제로 복원
-    if (AbilitySystem->HasMatchingGameplayTag(Tag_StateHovering))
-    {
-        if (auto* CM = GetCharacterMovement())
-        {
-            if (CM->MovementMode != MOVE_Flying)
-            {
-                CM->SetMovementMode(MOVE_Flying);
-                CM->GravityScale = 0.05f;
-            }
-        }
-    }
-}
 
 // ========================================
 // 능력 입력 핸들러들
