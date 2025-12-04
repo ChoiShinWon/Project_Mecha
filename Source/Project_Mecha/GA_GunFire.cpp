@@ -2,8 +2,6 @@
 // 총 발사 능력 - 탄창 관리, 크로스헤어 조준, 투사체 발사
 
 #include "GA_GunFire.h"
-#include "GA_Reload.h"
-
 #include "MechaAttributeSet.h"
 #include "MechaCharacterBase.h"
 
@@ -65,8 +63,7 @@ void UGA_GunFire::ActivateAbility(
 	const float Mag = ASC->GetNumericAttribute(UMechaAttributeSet::GetAmmoMagazineAttribute());
 	if (Mag <= 0.f)
 	{
-		// 탄약이 없으면 자동으로 장전 시작
-		ASC->TryActivateAbilityByClass(UGA_Reload::StaticClass());
+		// 탄약이 없으면 발사 불가
 		K2_EndAbility();
 		return;
 	}
@@ -87,13 +84,6 @@ void UGA_GunFire::ActivateAbility(
 	{
 		// 탄창 1 감소
 		ASC->ApplyModToAttribute(UMechaAttributeSet::GetAmmoMagazineAttribute(), EGameplayModOp::Additive, -1.f);
-
-		// 탄창이 비었으면 자동 장전
-		const float NewMag = ASC->GetNumericAttribute(UMechaAttributeSet::GetAmmoMagazineAttribute());
-		if (NewMag <= 0.f)
-		{
-			ASC->TryActivateAbilityByClass(UGA_Reload::StaticClass());
-		}
 	}
 
 	// ========== 연사 간격 후 능력 종료 ==========

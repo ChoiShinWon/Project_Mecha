@@ -6,7 +6,6 @@
 // 설명:
 // - 플레이어 발사 능력.
 // - 활성화 시 재장전/차단 태그 확인 → 투사체 스폰 → 탄창(AmmoMagazine) 1 감소.
-// - 탄약이 0이면 자동으로 GA_Reload를 시도합니다.
 #include "GameplayTagContainer.h"
 #include "GA_GunFire.generated.h"
 
