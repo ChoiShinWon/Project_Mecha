@@ -261,6 +261,10 @@ private:
     UPROPERTY(EditDefaultsOnly, Category = "QuickBoost")
     float LaunchZ = 200.f;
 
+    // 부스팅 중 최소 상승 속도 (Z축)
+    UPROPERTY(EditDefaultsOnly, Category = "QuickBoost")
+    float MinBoostVelocityZ = 100.f;
+
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Hover", meta = (AllowPrivateAccess = "true"))
     bool bIsHovering = false;
 

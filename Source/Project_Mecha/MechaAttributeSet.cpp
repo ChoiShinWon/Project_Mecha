@@ -57,13 +57,13 @@ void UMechaAttributeSet::PreAttributeChange(const FGameplayAttribute& Attribute,
 	// 이동 속도 범위 제한
 	if (Attribute == GetMoveSpeedAttribute())
 	{
-		NewValue = FMath::Clamp(NewValue, 100.f, 3000.f);
+		NewValue = FMath::Clamp(NewValue, MinMoveSpeed, MaxMoveSpeed);
 	}
 
 	// 최대 탄창은 최소 1
 	if (Attribute == GetMaxMagazineAttribute())
 	{
-		NewValue = FMath::Max(1.f, NewValue);
+		NewValue = FMath::Max(MinMagazineSize, NewValue);
 	}
 }
 

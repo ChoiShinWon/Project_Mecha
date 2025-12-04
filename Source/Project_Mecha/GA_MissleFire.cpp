@@ -11,7 +11,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "TimerManager.h"
 #include "Engine/World.h"
-#include "EnemyAirship.h"
+#include "EnemyMecha.h"
 #include "AbilitySystemComponent.h"
 
 // ========================================
@@ -65,6 +65,10 @@ void UGA_MissleFire::ActivateAbility(
 	// 첫 번째 미사일은 즉시 발사
 	SpawnMissle(0, OwnerChar);
 
+	// 기존 타이머 정리 (재활성화 시)
+	ClearAllTimers();
+	MissileFireTimerHandles.Reset();
+
 	// 나머지 미사일들은 시간차를 두고 순차 발사
 	for (int32 i = 1; i < NumProjectiles; ++i)
 	{
@@ -82,13 +86,15 @@ void UGA_MissleFire::ActivateAbility(
 			i * TimeBetweenShots,  // 발사 간격
 			false
 		);
+		
+		// 타이머 핸들 저장 (나중에 취소 가능하도록)
+		MissileFireTimerHandles.Add(Th);
 	}
 
 	// 모든 미사일 발사 완료 후 능력 종료
-	const float TotalTime = (NumProjectiles - 1) * TimeBetweenShots + 0.05f;
-	FTimerHandle EndTh;
+	const float TotalTime = (NumProjectiles - 1) * TimeBetweenShots + EndAbilityBufferTime;
 	OwnerChar->GetWorldTimerManager().SetTimer(
-		EndTh,
+		EndAbilityTimerHandle,
 		FTimerDelegate::CreateLambda([this, Handle, ActorInfo, ActivationInfo]()
 			{
 				if (IsActive()) EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
@@ -127,12 +133,12 @@ void UGA_MissleFire::SpawnMissle(int32 Index, ACharacter* OwnerChar)
 		SpawnRot = Mesh->GetSocketRotation(SocketName);
 		
 		// 캐릭터 충돌 방지를 위해 앞쪽으로 추가 오프셋
-		SpawnLoc += Mesh->GetSocketRotation(SocketName).Vector() * 80.f;
+		SpawnLoc += Mesh->GetSocketRotation(SocketName).Vector() * SocketCollisionOffset;
 	}
 	else
 	{
 		// 소켓이 없으면 캐릭터 앞쪽에 스폰
-		SpawnLoc = OwnerChar->GetActorLocation() + OwnerChar->GetActorForwardVector() * (SpawnOffset + 80.f) + FVector(0, 0, 50);
+		SpawnLoc = OwnerChar->GetActorLocation() + OwnerChar->GetActorForwardVector() * (SpawnOffset + SocketCollisionOffset) + FVector(0, 0, FallbackZOffset);
 		SpawnRot = OwnerChar->GetControlRotation();
 	}
 
@@ -214,66 +220,38 @@ AActor* UGA_MissleFire::PickBestTarget(const AActor* Owner) const
 	const FVector OLoc = Owner->GetActorLocation();
 
 	// Enemy가 발사하는 경우 → 플레이어를 타겟으로
-	if (Owner->ActorHasTag(TEXT("Enemy")) || Owner->IsA(AEnemyAirship::StaticClass()))
+	if (Owner->ActorHasTag(TEXT("Enemy")))
 	{
 		return UGameplayStatics::GetPlayerPawn(World, 0);
 	}
 
 	// 플레이어가 발사하는 경우 → 가장 가까운 Enemy 찾기
-	TArray<AActor*> AllActors;
-	UGameplayStatics::GetAllActorsOfClass(World, AActor::StaticClass(), AllActors);
-
-	// Enemy 태그가 있는 액터들만 필터링
+	// 성능 최적화: 특정 Enemy 클래스만 직접 검색 (모든 액터를 가져오지 않음)
 	TArray<AActor*> Candidates;
-	for (AActor* A : AllActors)
-	{
-		if (A && A->ActorHasTag(TEXT("Enemy")))
-		{
-			Candidates.Add(A);
-		}
-	}
+	
+	// EnemyMecha 클래스로 검색
+	TArray<AActor*> EnemyMechas;
+	UGameplayStatics::GetAllActorsOfClass(World, AEnemyMecha::StaticClass(), EnemyMechas);
+	Candidates.Append(EnemyMechas);
+	
 
 	// 최단 거리의 적 선택
 	AActor* Best = nullptr;
-	float BestDistSq = MaxLockDistance * MaxLockDistance;
+	const float MaxDistSq = MaxLockDistance * MaxLockDistance;
+	float BestDistSq = MaxDistSq;
 
-	for (AActor* A : Candidates)
+	for (AActor* Candidate : Candidates)
 	{
-		if (!A) continue;
-		const float D2 = FVector::DistSquared(OLoc, A->GetActorLocation());
-		if (D2 < BestDistSq) 
+		if (!Candidate) continue;
+		
+		const float DistSq = FVector::DistSquared(OLoc, Candidate->GetActorLocation());
+		if (DistSq < BestDistSq) 
 		{ 
-			BestDistSq = D2; 
-			Best = A; 
+			BestDistSq = DistSq; 
+			Best = Candidate; 
 		}
 	}
 	return Best;
-}
-
-// ========================================
-// 유도 미사일 설정 (대체 방법)
-// ========================================
-void UGA_MissleFire::SetupHoming(AActor* Missle, AActor* Target) const
-{
-	if (!Missle || !Target) return;
-	
-	if (UProjectileMovementComponent* Move = Missle->FindComponentByClass<UProjectileMovementComponent>())
-	{
-		// 유도 기능 활성화
-		Move->bIsHomingProjectile = true;
-		Move->HomingTargetComponent = Target->GetRootComponent();
-		Move->HomingAccelerationMagnitude = HomingAcceleration;
-		Move->bRotationFollowsVelocity = true;
-
-		// 속도가 0이면 초기 속도 부여
-		if (Move->Velocity.IsNearlyZero())
-		{
-			const FVector Dir = (Target->GetActorLocation() - Missle->GetActorLocation()).GetSafeNormal();
-			Move->Velocity = Dir * FMath::Max(Move->InitialSpeed, InitialLaunchSpeed);
-		}
-		
-		Move->Activate(true);
-	}
 }
 
 // ========================================
@@ -391,7 +369,12 @@ void UGA_MissleFire::ApplyMissileCooldown(
 	AActor* OwnerActor = Cast<AActor>(ActorInfo->AvatarActor.Get());
 	if (!OwnerActor) return;
 
-	FTimerHandle CooldownTimerHandle;
+	// 기존 쿨타임 타이머 취소 (중복 방지)
+	if (CooldownTimerHandle.IsValid())
+	{
+		OwnerActor->GetWorldTimerManager().ClearTimer(CooldownTimerHandle);
+	}
+
 	TWeakObjectPtr<UAbilitySystemComponent> WeakASC(ASC);
 
 	OwnerActor->GetWorldTimerManager().SetTimer(
@@ -404,4 +387,57 @@ void UGA_MissleFire::ApplyMissileCooldown(
 		CooldownDuration,
 		false
 	);
+}
+
+// ========================================
+// 타이머 정리
+// ========================================
+void UGA_MissleFire::EndAbility(
+	const FGameplayAbilitySpecHandle Handle,
+	const FGameplayAbilityActorInfo* ActorInfo,
+	const FGameplayAbilityActivationInfo ActivationInfo,
+	bool bReplicateEndAbility,
+	bool bWasCancelled)
+{
+	// 모든 타이머 정리
+	ClearAllTimers();
+
+	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
+}
+
+// ========================================
+// 모든 타이머 취소
+// ========================================
+void UGA_MissleFire::ClearAllTimers()
+{
+	if (const FGameplayAbilityActorInfo* ActorInfo = GetCurrentActorInfo())
+	{
+		if (AActor* OwnerActor = Cast<AActor>(ActorInfo->AvatarActor.Get()))
+		{
+			FTimerManager& TimerManager = OwnerActor->GetWorldTimerManager();
+
+			// 미사일 발사 타이머들 취소
+			for (FTimerHandle& Handle : MissileFireTimerHandles)
+			{
+				if (Handle.IsValid())
+				{
+					TimerManager.ClearTimer(Handle);
+				}
+			}
+			MissileFireTimerHandles.Empty();
+
+			// 능력 종료 타이머 취소
+			if (EndAbilityTimerHandle.IsValid())
+			{
+				TimerManager.ClearTimer(EndAbilityTimerHandle);
+			}
+
+			// 쿨타임 타이머는 유지 (쿨타임은 계속 진행되어야 함)
+			// 필요시 쿨타임 타이머도 취소하려면 아래 주석 해제
+			// if (CooldownTimerHandle.IsValid())
+			// {
+			//     TimerManager.ClearTimer(CooldownTimerHandle);
+			// }
+		}
+	}
 }

@@ -48,6 +48,10 @@ public:
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat", meta = (AllowPrivateAccess = "true"))
     FName FireSocketName = TEXT("FireSocket");
 
+    // 소켓이 없을 때 사용하는 스폰 오프셋 (앞쪽 거리)
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat", meta = (AllowPrivateAccess = "true"))
+    float FallbackSpawnOffset = 100.f;
+
     // AI가 채워줄 타겟
     UPROPERTY(BlueprintReadWrite, Category = "AI")
     AActor* CurrentTarget;

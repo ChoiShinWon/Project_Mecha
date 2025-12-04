@@ -143,7 +143,7 @@ void UGA_GunFire::SpawnProjectile(const FGameplayAbilityActorInfo* ActorInfo)
 	else
 	{
 		// 둘 다 없으면 캐릭터 앞쪽
-		SpawnLoc = Mecha->GetActorLocation() + Mecha->GetActorForwardVector() * 100.f;
+		SpawnLoc = Mecha->GetActorLocation() + Mecha->GetActorForwardVector() * FallbackSpawnOffset;
 	}
 
 	// ========== 2. 화면 중앙 크로스헤어로 조준점 계산 ==========

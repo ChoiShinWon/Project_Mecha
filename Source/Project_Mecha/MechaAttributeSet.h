@@ -78,4 +78,14 @@ public:
     virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
     virtual void PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue) override;
     virtual void PostGameplayEffectExecute(const struct FGameplayEffectModCallbackData& Data) override;
+
+    // ================== Attribute 제한값 상수 ==================
+    // 이동 속도 최소값
+    static constexpr float MinMoveSpeed = 100.f;
+    
+    // 이동 속도 최대값
+    static constexpr float MaxMoveSpeed = 3000.f;
+    
+    // 최소 탄창 크기
+    static constexpr float MinMagazineSize = 1.f;
 };

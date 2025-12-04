@@ -109,7 +109,7 @@ void AMechaCharacterBase::Tick(float DeltaSeconds)
             // 부스팅 중에는 최소 상승 속도 유지
             if (AbilitySystem && AbilitySystem->HasMatchingGameplayTag(Tag_Boosting))
             {
-                Move->Velocity.Z = FMath::Max(Move->Velocity.Z, 100.f);
+                Move->Velocity.Z = FMath::Max(Move->Velocity.Z, MinBoostVelocityZ);
             }
         }
     }

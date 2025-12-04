@@ -451,7 +451,7 @@ void AEnemyMecha::FireMissileFromNotify()
 	else
 	{
 		// 소켓이 없으면 앞쪽에서
-		SpawnLocation = GetActorLocation() + GetActorForwardVector() * 100.f;
+		SpawnLocation = GetActorLocation() + GetActorForwardVector() * FallbackSpawnOffset;
 		SpawnRotation = GetActorRotation();
 	}
 

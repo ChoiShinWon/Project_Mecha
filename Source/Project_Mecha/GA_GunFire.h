@@ -47,4 +47,8 @@ protected:
 
     UFUNCTION()
     void OnMontageNotify(); // 필요 시 사용
+
+    // 소켓이 없을 때 사용하는 스폰 오프셋 (앞쪽 거리)
+    UPROPERTY(EditDefaultsOnly, Category = "GunFire|Spawn")
+    float FallbackSpawnOffset = 100.f;
 };
