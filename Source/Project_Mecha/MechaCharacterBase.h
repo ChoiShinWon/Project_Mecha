@@ -87,7 +87,7 @@ protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "VFX")
     UParticleSystemComponent* OverheatParticleComponent;
 
-    // Overheat 시 재생할 파티클 시스템 (블루프린트에서 설정)
+    // Overheat 시 재생할 파티클 시스템 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "VFX")
     UParticleSystem* OverheatParticleSystem;
 
@@ -110,10 +110,9 @@ protected:
     UPROPERTY(EditDefaultsOnly, Category = "Input") UInputAction* IA_Reload;
 
     //  락온 입력 액션 (마우스 휠 버튼)
-    UPROPERTY(EditDefaultsOnly, Category = "Input")
-    UInputAction* IA_LockOn;
+    UPROPERTY(EditDefaultsOnly, Category = "Input") UInputAction* IA_LockOn;
 
-    // AbilitySystemComponent 별칭(선택)
+    // AbilitySystemComponent 별칭
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "GAS")
     UAbilitySystemComponent* ASC = nullptr;
 
@@ -132,14 +131,14 @@ protected:
     UFUNCTION() void Input_LockOnToggle(const FInputActionValue& Value);
 
 public:
-    /** 총알 블루프린트 클래스 지정 (예: BP_Bullet) */
+    /** 총알 블루프린트 클래스 지정 (BP_Bullet) */
     UPROPERTY(EditDefaultsOnly, Category = "FireSocket")
     TSubclassOf<class AActor> ProjectileClass;
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon")
     FName MuzzleSocketName = TEXT("FireSocket");
 
-    /** 총구 위치 (Mesh의 소켓 또는 SceneComponent) */
+    /** 총구 위치 */
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon")
     USceneComponent* MuzzleLocation;
 
@@ -158,7 +157,7 @@ public:
     UFUNCTION(BlueprintCallable, Category = "HitReact")
     void PlayHitReactFromDirection(const FVector& AttackWorldLocation);
 
-    // === Death ===
+    // === Death 몽타주주 ===
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Death|Montage")
     UAnimMontage* DeathMontage;
 
@@ -186,7 +185,7 @@ protected:
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "GAS|Effects")
     TSubclassOf<class UGameplayEffect> GE_InitAttributes;
 
-    UPROPERTY(EditDefaultsOnly, Category = "GAS|QuickBoost")
+    UPROPERTY(EditDefaultsOnly, Category = "GAS|Effects")
     TSubclassOf<UGameplayEffect> GE_QuickBoost;
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "GAS|Effects")

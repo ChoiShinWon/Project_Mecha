@@ -41,7 +41,7 @@ AMechaCharacterBase::AMechaCharacterBase()
     // ========== 카메라 설정 ==========
     SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
     SpringArm->SetupAttachment(RootComponent);
-    SpringArm->TargetArmLength = 400.f;
+    SpringArm->TargetArmLength = 300.f;
     SpringArm->bUsePawnControlRotation = true;
 
     FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
