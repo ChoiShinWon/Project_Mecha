@@ -27,7 +27,6 @@ void AEnemyAIController::OnPossess(APawn* InPawn)
 	AEnemyMecha* Enemy = Cast<AEnemyMecha>(InPawn);
 	if (!Enemy)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("EnemyAIController::OnPossess - Pawn is NOT EnemyMecha"));
 		return;
 	}
 
@@ -35,7 +34,6 @@ void AEnemyAIController::OnPossess(APawn* InPawn)
 	UBehaviorTree* BT = Enemy->GetBehaviorTree();
 	if (!BT)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("EnemyAIController::OnPossess - BehaviorTreeAsset is NULL"));
 		return;
 	}
 
@@ -45,13 +43,11 @@ void AEnemyAIController::OnPossess(APawn* InPawn)
 		const bool bBBOK = UseBlackboard(BT->BlackboardAsset, BlackboardComp);
 		if (!bBBOK || !BlackboardComp)
 		{
-			UE_LOG(LogTemp, Warning, TEXT("EnemyAIController::OnPossess - UseBlackboard FAILED"));
 			return;
 		}
 	}
 	else
 	{
-		UE_LOG(LogTemp, Warning, TEXT("EnemyAIController::OnPossess - BehaviorTree has no BlackboardAsset"));
 		return;
 	}
 
@@ -67,12 +63,5 @@ void AEnemyAIController::OnPossess(APawn* InPawn)
 	}
 
 	// ========== Behavior Tree 실행 ==========
-	const bool bBTOK = RunBehaviorTree(BT);
-	if (!bBTOK)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("EnemyAIController::OnPossess - RunBehaviorTree FAILED"));
-		return;
-	}
-
-	UE_LOG(LogTemp, Log, TEXT("EnemyAIController::OnPossess - BT started successfully"));
+	RunBehaviorTree(BT);
 }

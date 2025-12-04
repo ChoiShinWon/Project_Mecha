@@ -44,8 +44,6 @@ void UWBP_GameOver::ShowGameOver(float FadeInDuration)
 		);
 	}
 
-	UE_LOG(LogTemp, Log, TEXT("[GameOver] Game Over screen shown with fade duration: %.2f"), FadeInDuration);
-
 	// 블루프린트 이벤트 호출
 	OnGameOverShown();
 }
@@ -89,7 +87,6 @@ void UWBP_GameOver::RestartLevel()
 	UWorld* World = GetWorld();
 	if (!World)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[GameOver] RestartLevel - No World found"));
 		return;
 	}
 
@@ -98,8 +95,6 @@ void UWBP_GameOver::RestartLevel()
 	
 	// 레벨 이름 정리 (PIE 프리픽스 제거)
 	CurrentLevelName.RemoveFromStart(World->StreamingLevelsPrefix);
-
-	UE_LOG(LogTemp, Log, TEXT("[GameOver] Restarting level: %s"), *CurrentLevelName);
 
 	// 레벨 재시작
 	UGameplayStatics::OpenLevel(World, FName(*CurrentLevelName), false);
@@ -113,11 +108,8 @@ void UWBP_GameOver::GoToMainMenu()
 	UWorld* World = GetWorld();
 	if (!World)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[GameOver] GoToMainMenu - No World found"));
 		return;
 	}
-
-	UE_LOG(LogTemp, Log, TEXT("[GameOver] Going to main menu: %s"), *MainMenuLevelName.ToString());
 
 	// 메인 메뉴로 이동
 	UGameplayStatics::OpenLevel(World, MainMenuLevelName, false);

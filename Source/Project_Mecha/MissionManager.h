@@ -17,9 +17,9 @@ class PROJECT_MECHA_API AMissionManager : public AActor
 public:
     AMissionManager();
 
-    // === ¹Ì¼Ç »óÅÂ ===
+    // === ë¯¸ì…˜ ì„¤ì • ===
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mission")
-    int32 RequiredKillCount = 10;   // º¸½º ³ª¿À±â Àü±îÁö Àâ¾Æ¾ß ÇÒ Àû ¼ö
+    int32 RequiredKillCount = 10;
 
     UPROPERTY(BlueprintReadOnly, Category = "Mission")
     int32 CurrentKillCount = 0;
@@ -27,30 +27,30 @@ public:
     UPROPERTY(BlueprintReadOnly, Category = "Mission")
     bool bMissionActive = false;
 
-    // === º¸½º ÆäÀÌÁî »óÅÂ ===
+    // === ë³´ìŠ¤ í˜ì´ì¦ˆ ì„¤ì • ===
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Boss")
-    TSubclassOf<AEnemyMecha> BossClass;      // BP_BossCrunch ³ÖÀ» ÀÚ¸®
+    TSubclassOf<AEnemyMecha> BossClass;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Boss")
-    AActor* BossSpawnPoint = nullptr;        // TargetPoint µî
+    AActor* BossSpawnPoint = nullptr;
 
     UPROPERTY(BlueprintReadWrite, Category = "Boss")
-    AEnemyMecha* BossInstance = nullptr;     // ½ºÆùµÈ º¸½º
+    AEnemyMecha* BossInstance = nullptr;
 
     UPROPERTY(BlueprintReadOnly, Category = "Boss")
-    bool bBossPhaseStarted = false;          // º¸½º ÆäÀÌÁî µ¹ÀÔ ¿©ºÎ
+    bool bBossPhaseStarted = false;
 
     UPROPERTY(BlueprintReadOnly, Category = "Boss")
-    bool bBossDefeated = false;              // º¸½º Ã³Ä¡ ¿©ºÎ
+    bool bBossDefeated = false;
 
-    // === ¹Ì¼Ç Á¦¾î ===
+    // === ë¯¸ì…˜ í•¨ìˆ˜ ===
     UFUNCTION(BlueprintCallable, Category = "Mission")
     void StartMission();
 
     UFUNCTION(BlueprintCallable, Category = "Mission")
     void NotifyEnemyKilled(AEnemyMecha* KilledEnemy);
 
-    // º¸½º°¡ Á×¾úÀ» ¶§(EnemyMecha / BP_BossCrunch¿¡¼­ È£Ãâ)
+    // ë³´ìŠ¤ê°€ ì£½ì—ˆì„ ë•Œ í˜¸ì¶œ (EnemyMechaì—ì„œ í˜¸ì¶œ)
     UFUNCTION(BlueprintCallable, Category = "Boss")
     void NotifyBossDefeated(AEnemyMecha* DefeatedBoss);
 
@@ -66,23 +66,19 @@ protected:
     float MissionStartTime = 0.f;
     float MissionEndTime = 0.f;
 
-    // === ³»ºÎ¿ë: º¸½º ÆäÀÌÁî ½ÃÀÛ ===
+    // === ë‚´ë¶€: ë³´ìŠ¤ í˜ì´ì¦ˆ ì‹œì‘ ===
     void StartBossPhase();
 
-    // === BP¿¡¼­ ±¸ÇöÇÒ ÀÌº¥Æ®µé ===
-    // ¡æ ÀÌÁ¦ NetMulticast ¾øÀÌ, ·ÎÄÃ¿¡¼­ Á÷Á¢ È£ÃâÇØ¼­ UI/ÄÆ½Å Ã³¸®
-
+    // === BPì—ì„œ êµ¬í˜„í•  ì´ë²¤íŠ¸ë“¤ ===
     UFUNCTION(BlueprintImplementableEvent, Category = "Mission|BP")
     void OnMissionStartedBP(int32 InRequiredKillCount);
 
     UFUNCTION(BlueprintImplementableEvent, Category = "Mission|BP")
     void OnMissionProgressBP(int32 InCurrentKillCount, int32 InRequiredKillCount);
 
-    // "º¸½º±îÁö Á×ÀÎ µÚ" ÃÖÁ¾ Å¬¸®¾î ½ÃÁ¡
     UFUNCTION(BlueprintImplementableEvent, Category = "Mission|BP")
     void OnMissionClearedBP();
 
-    // º¸½º ÆäÀÌÁî ½ÃÀÛ ½Ã(º¸½º ½ºÆù Á÷ÈÄ) BP ÄÆ½Å/Ä«¸Ş¶ó Ã³¸®¿ë
     UFUNCTION(BlueprintImplementableEvent, Category = "Boss|BP")
     void OnBossPhaseStartedBP();
 };

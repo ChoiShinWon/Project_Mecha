@@ -31,7 +31,7 @@ public:
     ) override;
 
 protected:
-    // == ���� �� ==
+    // == 호버 파라미터 ==
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hover|Enemy")
     bool bUseFlyingMode = true;
 
@@ -44,11 +44,11 @@ protected:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hover|Enemy")
     float GravityScaleWhileHover = 0.2f;
 
-    // Enemy�� ���߿� �� �ִ� ���� �ð�
+    // Enemy가 호버할 수 있는 최대 지속 시간
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hover|Enemy")
-    float HoverDuration = 1.5f; // �� ����, �ʿ��ϸ� ����
+    float HoverDuration = 1.5f;
 
-    // ���� �±�
+    // == 게임플레이 태그 ==
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hover|Tags")
     FGameplayTag Tag_StateHovering;
 

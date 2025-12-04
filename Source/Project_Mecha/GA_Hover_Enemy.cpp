@@ -8,9 +8,6 @@
 UGA_Hover_Enemy::UGA_Hover_Enemy()
 {
     InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
-
-    // 필요하면 여기서 기본 태그 설정
-    // Tag_StateHovering = FGameplayTag::RequestGameplayTag(FName("State.Hovering"));
 }
 
 void UGA_Hover_Enemy::ActivateAbility(
@@ -36,7 +33,7 @@ void UGA_Hover_Enemy::ActivateAbility(
 
     StartHover();
 
-    // ★ 일정 시간 뒤 자동으로 EndAbility 호출
+    // 일정 시간 뒤 자동으로 EndAbility 호출
     if (OwnerCharacter.IsValid())
     {
         FTimerManager& TM = OwnerCharacter->GetWorldTimerManager();
@@ -160,6 +157,6 @@ void UGA_Hover_Enemy::OnHoverDurationEnded()
     if (!IsActive())
         return;
 
-    // ★ 여기서 EndAbility 호출 → StopHover + 태그 제거까지 호출됨
+    // 여기서 EndAbility 호출 → StopHover + 태그 제거까지 호출됨
     EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 }

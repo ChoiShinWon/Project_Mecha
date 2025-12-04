@@ -41,33 +41,23 @@ void UGA_MissleFire::ActivateAbility(
 	const FGameplayAbilityActivationInfo ActivationInfo,
 	const FGameplayEventData* TriggerEventData)
 {
-	UE_LOG(LogTemp, Warning, TEXT("[GA_MissileFire] ActivateAbility CALLED"));
-
 	// 코스트/쿨다운 체크
 	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[GA_MissileFire] CommitAbility FAILED"));
 		return;
 	}
-
-	UE_LOG(LogTemp, Warning, TEXT("[GA_MissileFire] CommitAbility SUCCESS"));
 
 	// 오너 캐릭터 유효성 검사
 	ACharacter* OwnerChar = Cast<ACharacter>(ActorInfo ? ActorInfo->AvatarActor.Get() : nullptr);
 	if (!OwnerChar || !MissleProjectileClass)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[GA_MissileFire] OwnerChar or MissleProjectileClass is NULL"));
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
 
-	UE_LOG(LogTemp, Warning, TEXT("[GA_MissileFire] OwnerChar valid, HasAuthority=%s"), 
-		OwnerChar->HasAuthority() ? TEXT("TRUE") : TEXT("FALSE"));
-
 	// 서버에서만 미사일 스폰 실행
 	if (!OwnerChar->HasAuthority())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[GA_MissileFire] No Authority - EndAbility"));
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
 		return;
 	}
@@ -116,20 +106,14 @@ void UGA_MissleFire::ActivateAbility(
 // ========================================
 void UGA_MissleFire::SpawnMissle(int32 Index, ACharacter* OwnerChar)
 {
-	UE_LOG(LogTemp, Warning, TEXT("[GA_MissileFire] SpawnMissle called - Index=%d, OwnerChar=%s"), 
-		Index, OwnerChar ? *OwnerChar->GetName() : TEXT("NULL"));
-
 	// 유효성 검사
 	if (!OwnerChar || !MissleProjectileClass)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[GA_MissileFire] SpawnMissle FAILED - OwnerChar or MissleProjectileClass is NULL"));
 		return;
 	}
 
 	// 타겟 검색
 	AActor* Target = PickBestTarget(OwnerChar);
-	UE_LOG(LogTemp, Warning, TEXT("[GA_MissileFire] Target found: %s"), 
-		Target ? *Target->GetName() : TEXT("NULL"));
 
 	FVector  SpawnLoc;
 	FRotator SpawnRot;
@@ -171,10 +155,6 @@ void UGA_MissleFire::SpawnMissle(int32 Index, ACharacter* OwnerChar)
 	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
 
 	AActor* Missle = OwnerChar->GetWorld()->SpawnActor<AActor>(MissleProjectileClass, SpawnLoc, SpawnRot, Params);
-
-	UE_LOG(LogTemp, Warning,
-		TEXT("[GA_MissileFire] SpawnActor result = %s"),
-		Missle ? *Missle->GetName() : TEXT("NULL"));
 
 	if (!Missle) return;
 

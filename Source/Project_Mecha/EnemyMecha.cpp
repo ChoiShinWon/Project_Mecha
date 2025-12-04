@@ -127,11 +127,6 @@ void AEnemyMecha::BeginPlay()
 				if (Found)
 				{
 					MissionManager = Cast<AMissionManager>(Found);
-					UE_LOG(LogTemp, Log, TEXT("EnemyMecha: Found MissionManager %s"), *MissionManager->GetName());
-				}
-				else
-				{
-					UE_LOG(LogTemp, Warning, TEXT("EnemyMecha: MissionManager not found in level"));
 				}
 			}
 
@@ -198,19 +193,10 @@ void AEnemyMecha::BeginPlay()
 					ParticleComp->RegisterComponent();
 
 					HoverParticleComponents.Add(ParticleComp);
-
-					UE_LOG(LogTemp, Log, TEXT("AEnemyMecha: Created hover particle at socket %s with scale %s and rotation %s"), 
-						*SocketName.ToString(), *HoverParticleScale.ToString(), *HoverParticleRotation.ToString());
 				}
-			}
-			else
-			{
-				UE_LOG(LogTemp, Warning, TEXT("AEnemyMecha: Socket %s does not exist on %s"), *SocketName.ToString(), *GetName());
 			}
 		}
 	}
-
-	UE_LOG(LogTemp, Warning, TEXT("AEnemyMecha::BeginPlay - %s"), *GetName());
 }
 
 // ========================================
@@ -220,7 +206,6 @@ void AEnemyMecha::InitializeAttributes()
 {
 	if (!AbilitySystem || !InitAttributesEffect)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("AEnemyMecha::InitializeAttributes - Missing ASC or InitAttributesEffect on %s"), *GetName());
 		return;
 	}
 
@@ -240,15 +225,6 @@ void AEnemyMecha::InitializeAttributes()
 		{
 			AttributeSet->SetHealth(AttributeSet->GetMaxHealth());
 		}
-
-		UE_LOG(LogTemp, Warning, TEXT("AEnemyMecha::InitializeAttributes - Applied InitAttributesEffect on %s (Health=%f / MaxHealth=%f)"),
-			*GetName(),
-			AttributeSet ? AttributeSet->GetHealth() : -1.f,
-			AttributeSet ? AttributeSet->GetMaxHealth() : -1.f);
-	}
-	else
-	{
-		UE_LOG(LogTemp, Warning, TEXT("AEnemyMecha::InitializeAttributes - Spec invalid on %s"), *GetName());
 	}
 }
 
@@ -452,14 +428,12 @@ void AEnemyMecha::FireMissileFromNotify()
 {
 	if (!MissileClass_Enemy || !CurrentTarget)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("AEnemyMecha::FireMissileFromNotify - No MissileClass_Enemy or CurrentTarget on %s"), *GetName());
 		return;
 	}
 
 	USkeletalMeshComponent* SkeletalMeshComp = GetMesh();
 	if (!SkeletalMeshComp)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("AEnemyMecha::FireMissileFromNotify - No Mesh on %s"), *GetName());
 		return;
 	}
 
@@ -547,7 +521,6 @@ void AEnemyMecha::ActivateHoverParticles()
 		if (ParticleComp && !ParticleComp->IsActive())
 		{
 			ParticleComp->Activate(true);
-			UE_LOG(LogTemp, Log, TEXT("AEnemyMecha: Activated hover particle on %s"), *GetName());
 		}
 	}
 }
@@ -560,7 +533,6 @@ void AEnemyMecha::DeactivateHoverParticles()
 		if (ParticleComp && ParticleComp->IsActive())
 		{
 			ParticleComp->Deactivate();
-			UE_LOG(LogTemp, Log, TEXT("AEnemyMecha: Deactivated hover particle on %s"), *GetName());
 		}
 	}
 }
@@ -576,8 +548,6 @@ void AEnemyMecha::SetHoverParticleScale(FVector NewScale)
 		if (ParticleComp)
 		{
 			ParticleComp->SetRelativeScale3D(NewScale);
-			UE_LOG(LogTemp, Log, TEXT("AEnemyMecha: Updated hover particle scale to %s on %s"), 
-				*NewScale.ToString(), *GetName());
 		}
 	}
 }
@@ -593,8 +563,6 @@ void AEnemyMecha::SetHoverParticleRotation(FRotator NewRotation)
         if (ParticleComp)
         {
             ParticleComp->SetRelativeRotation(NewRotation);
-            UE_LOG(LogTemp, Log, TEXT("AEnemyMecha: Updated hover particle rotation to %s on %s"), 
-                *NewRotation.ToString(), *GetName());
         }
     }
 }
@@ -607,8 +575,6 @@ void AEnemyMecha::CreateBossHealthWidget()
 {
     if (!bIsBoss || !BossHealthWidgetClass)
     {
-        UE_LOG(LogTemp, Warning, TEXT("AEnemyMecha::CreateBossHealthWidget - bIsBoss=%d, BossHealthWidgetClass=%s on %s"),
-            bIsBoss, BossHealthWidgetClass ? TEXT("Valid") : TEXT("Null"), *GetName());
         return;
     }
 
@@ -616,7 +582,6 @@ void AEnemyMecha::CreateBossHealthWidget()
     APlayerController* PC = UGameplayStatics::GetPlayerController(GetWorld(), 0);
     if (!PC)
     {
-        UE_LOG(LogTemp, Warning, TEXT("AEnemyMecha::CreateBossHealthWidget - No PlayerController found"));
         return;
     }
 
@@ -630,12 +595,6 @@ void AEnemyMecha::CreateBossHealthWidget()
         // ASC와 AttributeSet으로 초기화
         BossHealthWidget->InitWithBoss(AbilitySystem, AttributeSet, BossName);
         BossHealthWidget->ShowBossHealth();
-
-        UE_LOG(LogTemp, Log, TEXT("AEnemyMecha: Boss health widget created for %s"), *GetName());
-    }
-    else
-    {
-        UE_LOG(LogTemp, Warning, TEXT("AEnemyMecha::CreateBossHealthWidget - Failed to create widget for %s"), *GetName());
     }
 }
 
@@ -693,8 +652,6 @@ void AEnemyMecha::RestoreNormalTime()
 
     // 전역 시간 배율을 1.0 (정상)으로 복원
     UGameplayStatics::SetGlobalTimeDilation(World, 1.0f);
-
-    UE_LOG(LogTemp, Log, TEXT("AEnemyMecha: Boss death slow motion ended, normal time restored"));
 }
 
 // ========================================
@@ -719,23 +676,7 @@ void AEnemyMecha::OnDeathMontageEnded(UAnimMontage* Montage, bool bInterrupted)
             GetMesh()->bPauseAnims = true;
         }
 
-
-		Destroy();
+        // 즉시 제거
+        Destroy();
     }
-}
-
-// ========================================
-// 지연 후 제거 (사용하지 않음, 나중을 위해 보관)
-// Destroy after delay (not used, kept for future use)
-// ========================================
-void AEnemyMecha::DestroyAfterDelay()
-{
-    // 타이머 핸들 해제
-    if (UWorld* World = GetWorld())
-    {
-        World->GetTimerManager().ClearTimer(TimerHandle_DeathDestroy);
-    }
-
-    // 제거
-    Destroy();
 }

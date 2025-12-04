@@ -1,6 +1,5 @@
 // BossHealthWidget.h
 // 보스 체력바 위젯 - 화면 상단에 표시
-// Boss Health Bar Widget - Displayed at the top of the screen
 
 #pragma once
 
@@ -22,28 +21,24 @@ class PROJECT_MECHA_API UBossHealthWidget : public UUserWidget
 public:
     // ========================================
     // 보스 ASC와 AttributeSet으로 초기화
-    // Initialize with boss ASC and AttributeSet
     // ========================================
     UFUNCTION(BlueprintCallable, Category = "Boss|UI")
     void InitWithBoss(UAbilitySystemComponent* InASC, UMechaAttributeSet* InAttributes, const FText& InBossName);
 
     // ========================================
     // 체력 업데이트
-    // Update health
     // ========================================
     UFUNCTION(BlueprintCallable, Category = "Boss|UI")
     void ApplyHealth(float NewHealth, float MaxHealth);
 
     // ========================================
     // 보스 사망 시 호출
-    // Called when boss dies
     // ========================================
     UFUNCTION(BlueprintCallable, Category = "Boss|UI")
     void OnBossDead();
 
     // ========================================
     // 위젯 표시/숨김
-    // Show/Hide widget
     // ========================================
     UFUNCTION(BlueprintCallable, Category = "Boss|UI")
     void ShowBossHealth();

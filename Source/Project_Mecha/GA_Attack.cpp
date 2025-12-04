@@ -100,7 +100,6 @@ void UGA_Attack::PerformAttackTrace(AActor* SourceActor)
 	// 히트 실패
 	if (!bHit || !Hit.GetActor())
 	{
-		UE_LOG(LogTemp, Verbose, TEXT("[GA_Attack] No hit"));
 		return;
 	}
 
@@ -150,9 +149,6 @@ void UGA_Attack::ApplyDamage_GASOrEngine(AActor* SourceActor, AActor* HitActor, 
 
 			// 대상에게 GE 적용
 			TargetASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
-			
-			UE_LOG(LogTemp, Log, TEXT("[GA_Attack] Applied GAS Damage %.1f to %s"), 
-				AttackDamage, *HitActor->GetName());
 			return;
 		}
 	}
@@ -166,7 +162,4 @@ void UGA_Attack::ApplyDamage_GASOrEngine(AActor* SourceActor, AActor* HitActor, 
 		SourceActor, 
 		nullptr  // DamageTypeClass
 	);
-
-	UE_LOG(LogTemp, Log, TEXT("[GA_Attack] Fallback ApplyDamage %.1f to %s"), 
-		AttackDamage, *HitActor->GetName());
 }

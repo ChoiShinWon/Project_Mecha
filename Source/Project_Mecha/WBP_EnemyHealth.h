@@ -14,22 +14,22 @@ class PROJECT_MECHA_API UWBP_EnemyHealth : public UUserWidget
     GENERATED_BODY()
 
 public:
-    /** EnemyAirship°¡ BeginPlay¿¡¼­ È£ÃâÇØ¼­ ASC/Attrs ÁÖÀÔ */
+    // EnemyAirshipì˜ BeginPlayì—ì„œ í˜¸ì¶œí•˜ì—¬ ASC/Attrs ë°”ì¸ë”©
     UFUNCTION(BlueprintCallable, Category = "Init")
     void InitWithASC(UAbilitySystemComponent* InASC, const UMechaAttributeSet* InAttrs);
 
 protected:
     virtual void NativeDestruct() override;
 
-    /** À§Á¬ ¹ÙÀÎµù: ProgressBar(ÇÊ¼ö), Text(¼±ÅÃ) */
+    // ìœ„ì ¯ ë°”ì¸ë”©: ProgressBar(í•„ìˆ˜), Text(ì„ íƒ)
     UPROPERTY(meta = (BindWidget)) UProgressBar* PB_Health = nullptr;
     UPROPERTY(meta = (BindWidgetOptional)) UTextBlock* TxtHealth = nullptr;
 
-    /** ÂüÁ¶ Ä³½Ã */
+    // GAS ì°¸ì¡°
     UPROPERTY(BlueprintReadOnly, Category = "GAS") UAbilitySystemComponent* ASC = nullptr;
     UPROPERTY(BlueprintReadOnly, Category = "GAS") const UMechaAttributeSet* Attrs = nullptr;
 
-    /** »ö»ó/¿¬Ãâ ÀÓ°è°ª(¿øÇÏ¸é Á¶Á¤) */
+    // ì²´ë ¥/ìƒ‰ìƒ ì„ê³„ê°’(í•„ìš”í•˜ë©´ ìˆ˜ì •)
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI|Health")
     float WarningThreshold = 0.3f;
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI|Health")

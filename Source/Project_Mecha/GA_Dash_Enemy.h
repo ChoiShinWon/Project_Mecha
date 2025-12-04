@@ -17,41 +17,41 @@ public:
     UGA_Dash_Enemy();
 
 protected:
-    // == Dash ÆÄ¶ó¹ÌÅÍ ==
+    // == ëŒ€ì‹œ íŒŒë¼ë¯¸í„° ==
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Dash")
-    float DashDistance = 3000.0f;        // ´ë½¬ ÃÖ´ë °Å¸® (0ÀÌ¸é ¹«Á¦ÇÑ)
+    float DashDistance = 3000.0f;        // ëŒ€ì‹œ ìµœëŒ€ ê±°ë¦¬ (0ì´ë©´ ë¬´ì œí•œ)
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Dash")
-    float DashDuration = 0.35f;          // ´ë½¬¿¡ °É¸®´Â ½Ã°£ (ÂªÀ»¼ö·Ï ºü¸£°Ô ÈÅ)
+    float DashDuration = 0.35f;          // ëŒ€ì‹œê°€ ì§€ì†ë˜ëŠ” ì‹œê°„ (ì´ˆ ë‹¨ìœ„)
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Dash")
-    float MinStopDistance = 300.0f;      // Å¸°Ù°ú ÀÌ Á¤µµ´Â ³²°ÜµÎ°í ¸ØÃã
+    float MinStopDistance = 300.0f;      // íƒ€ê²Ÿê³¼ ìµœì†Œ ê±°ë¦¬ ìœ ì§€
 
-    // ½ÇÁ¦ ÀÌµ¿ °Å¸®(TravelDistance)¿¡ °öÇØÁö´Â ¹èÀ²
-    // 1.0 : Distance - MinStopDistance ¸¸Å­
-    // 2.0 : ±× 2¹è °Å¸®¸¸Å­ ´õ °­ÇÏ°Ô µ¹Áø
+    // ì‹¤ì œ ì´ë™ ê±°ë¦¬(TravelDistance)ì— ê³±í•˜ëŠ” ë°°ìˆ˜
+    // 1.0 : Distance - MinStopDistance ë§Œí¼
+    // 2.0 : ê·¸ 2ë°° ê±°ë¦¬ë§Œí¼ ë” ì´ë™í•˜ê²Œ í•¨
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Dash")
     float DashSpeedMultiplier = 2.0f;
 
-    // == ÅÂ±× (Á¤¸®¿ë) ==
+    // == íƒœê·¸ (ê²Œì„í”Œë ˆì´) ==
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tags")
-    FGameplayTag Tag_AbilityDash;        // Ability.Dash.Enemy
+    FGameplayTag Tag_AbilityDash;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tags")
-    FGameplayTag Tag_StateDashing;       // State.Dashing
+    FGameplayTag Tag_StateDashing;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tags")
-    FGameplayTag Tag_CooldownDash;       // Cooldown.Dash (¿øÇÏ¸é GE¿¡¼­ »ç¿ë)
+    FGameplayTag Tag_CooldownDash;
 
-    // == Äğ´Ù¿î ÀÌÆåÆ® (¼±ÅÃ) ==
+    // == ì¿¨ë‹¤ìš´ ì´í™íŠ¸ (ì„ íƒ) ==
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effects")
     TSubclassOf<class UGameplayEffect> DashCooldownEffectClass;
 
-    // == ´ë½¬ ¸ùÅ¸ÁÖ (¼±ÅÃ) ==
+    // == ëŒ€ì‹œ ëª½íƒ€ì£¼ (ì„ íƒ) ==
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Dash|Animation")
     UAnimMontage* DashMontage;
 
-    // == ´ë½¬ µ¿¾È Movement ¼³Á¤ ÀúÀå¿ë ==
+    // == ëŒ€ì‹œ ì¤‘ Movement íŒŒë¼ë¯¸í„° ì €ì¥ ==
     bool bSavedMovementParams = false;
 
     float SavedBrakingFrictionFactor = 0.0f;
@@ -78,6 +78,6 @@ protected:
 
     class ACharacter* GetEnemyCharacter(const FGameplayAbilityActorInfo* ActorInfo) const;
 
-    // EnemyMecha¿¡¼­ CurrentTarget ²¨³»±â
+    // EnemyMechaì—ì„œ CurrentTarget ê°€ì ¸ì˜¤ê¸°
     AActor* GetDashTarget(ACharacter* EnemyChar) const;
 };

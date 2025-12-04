@@ -173,7 +173,6 @@ void AMechaCharacterBase::BeginPlay()
             if (Spec.IsValid())
             {
                 EnergyRegenEffectHandle = AbilitySystem->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
-                UE_LOG(LogTemp, Warning, TEXT("EnergyRegenEffect Applied Successfully!"));
             }
         }
     }
@@ -210,14 +209,6 @@ void AMechaCharacterBase::BeginPlay()
                     MechaHUDWidget->SetHealthPercent(M > 0.f ? H / M : 0.f);
                 }
             }
-            else
-            {
-                UE_LOG(LogTemp, Warning, TEXT("MechaHUDWidget is null. Set HUDWidgetClass to WBP_MechaHUD in editor."));
-            }
-        }
-        else
-        {
-            UE_LOG(LogTemp, Warning, TEXT("HUDWidgetClass is not set on %s"), *GetName());
         }
     }
 }
@@ -310,7 +301,6 @@ void AMechaCharacterBase::OnEnergyChanged(const FOnAttributeChangeData& Data)
         if (!AbilitySystem->HasMatchingGameplayTag(Tag_Overheated))
         {
             AbilitySystem->AddLooseGameplayTag(Tag_Overheated);
-            UE_LOG(LogTemp, Warning, TEXT("[Energy] Overheated ON"));
 
             // ========== Overheat 파티클 활성화 ==========
             if (OverheatParticleComponent)
@@ -335,13 +325,11 @@ void AMechaCharacterBase::OnEnergyChanged(const FOnAttributeChangeData& Data)
                 if (AbilitySystem)
                 {
                     AbilitySystem->RemoveLooseGameplayTag(Tag_Overheated);
-                    UE_LOG(LogTemp, Warning, TEXT("[Energy] Overheated OFF"));
 
                     // ========== Overheat 파티클 비활성화 ==========
                     if (OverheatParticleComponent)
                     {
                         OverheatParticleComponent->Deactivate();
-                        UE_LOG(LogTemp, Log, TEXT("[VFX] Overheat Particle Deactivated"));
                     }
                 }
             },
@@ -507,7 +495,6 @@ void AMechaCharacterBase::OnMovementModeChanged(EMovementMode PrevMovementMode, 
             {
                 CM->SetMovementMode(MOVE_Flying);
                 CM->GravityScale = 0.05f;
-                UE_LOG(LogTemp, Warning, TEXT("[Hover Guard] Forced back to Flying mode."));
             }
         }
     }
@@ -648,8 +635,6 @@ bool AMechaCharacterBase::IsOverheated() const
 // ========================================
 void AMechaCharacterBase::HandleDeath()
 {
-    UE_LOG(LogTemp, Warning, TEXT("[Death] Player %s has died!"), *GetName());
-
     // ========== 입력 비활성화 ==========
     if (APlayerController* PC = Cast<APlayerController>(GetController()))
     {
@@ -676,7 +661,6 @@ void AMechaCharacterBase::HandleDeath()
         if (UCapsuleComponent* Capsule = GetCapsuleComponent())
         {
             Capsule->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-            UE_LOG(LogTemp, Log, TEXT("[Death] Capsule collision disabled for %s"), *GetName());
         }
 
         // ========== Mesh 콜리전 응답 변경 - Enemy가 감지/공격 못하게 ==========
@@ -691,8 +675,6 @@ void AMechaCharacterBase::HandleDeath()
             
             // Visibility 채널 무시 (AI 시야 감지 방지)
             SkelMesh->SetCollisionResponseToChannel(ECC_Visibility, ECR_Ignore);
-            
-            UE_LOG(LogTemp, Log, TEXT("[Death] Mesh collision responses changed for %s"), *GetName());
         }
     }
     else
@@ -705,8 +687,6 @@ void AMechaCharacterBase::HandleDeath()
             
             // Visibility 무시 (AI 시야에 안 보임)
             Capsule->SetCollisionResponseToChannel(ECC_Visibility, ECR_Ignore);
-            
-            UE_LOG(LogTemp, Log, TEXT("[Death] AI detection disabled for %s"), *GetName());
         }
     }
 
@@ -719,7 +699,6 @@ void AMechaCharacterBase::HandleDeath()
             SkelMesh->SetSimulatePhysics(true);
             SkelMesh->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
             SkelMesh->SetCollisionProfileName(TEXT("Ragdoll"));
-            UE_LOG(LogTemp, Log, TEXT("[Death] Ragdoll activated for %s"), *GetName());
         }
     }
     else
@@ -734,12 +713,7 @@ void AMechaCharacterBase::HandleDeath()
                 
                 // 몽타주가 끝나도 마지막 프레임 유지
                 // (BlendOut을 0으로 설정하거나, 애니메이션의 마지막 프레임에 Pose Snapshot 사용)
-                UE_LOG(LogTemp, Log, TEXT("[Death] Playing death montage for %s"), *GetName());
             }
-        }
-        else
-        {
-            UE_LOG(LogTemp, Warning, TEXT("[Death] No death montage set for %s"), *GetName());
         }
     }
 
@@ -755,7 +729,6 @@ void AMechaCharacterBase::ShowGameOverScreen()
     APlayerController* PC = Cast<APlayerController>(GetController());
     if (!PC)
     {
-        UE_LOG(LogTemp, Warning, TEXT("[GameOver] No PlayerController found"));
         return;
     }
 
@@ -766,11 +739,9 @@ void AMechaCharacterBase::ShowGameOverScreen()
         if (GameOverWidget)
         {
             GameOverWidget->AddToViewport(999);  // 최상위 Z-Order
-            UE_LOG(LogTemp, Log, TEXT("[GameOver] Game Over widget created"));
         }
         else
         {
-            UE_LOG(LogTemp, Warning, TEXT("[GameOver] Failed to create Game Over widget"));
             return;
         }
     }
@@ -779,16 +750,11 @@ void AMechaCharacterBase::ShowGameOverScreen()
     if (GameOverWidget)
     {
         GameOverWidget->ShowGameOver(GameOverFadeInDuration);
-        UE_LOG(LogTemp, Warning, TEXT("[GameOver] Game Over screen displayed"));
 
         // 마우스 커서 표시 (메뉴 선택 가능하도록)
         PC->bShowMouseCursor = true;
         PC->bEnableClickEvents = true;
         PC->bEnableMouseOverEvents = true;
-    }
-    else
-    {
-        UE_LOG(LogTemp, Warning, TEXT("[GameOver] GameOverWidget is null. Set GameOverWidgetClass in Blueprint"));
     }
 }
 
@@ -810,7 +776,6 @@ void AMechaCharacterBase::ToggleLockOn()
     AActor* NewTarget = FindLockOnTarget();
     if (!NewTarget)
     {
-        UE_LOG(LogTemp, Log, TEXT("LockOn: No target found"));
         return;
     }
 
@@ -828,8 +793,6 @@ void AMechaCharacterBase::ToggleLockOn()
         bUseControllerRotationYaw = true;
         MoveComp->bOrientRotationToMovement = false;
     }
-
-    UE_LOG(LogTemp, Log, TEXT("LockOn: %s"), *NewTarget->GetName());
 }
 
 // 락온 해제
@@ -844,8 +807,6 @@ void AMechaCharacterBase::ClearLockOn()
         bUseControllerRotationYaw = bSavedUseControllerRotationYaw;
         MoveComp->bOrientRotationToMovement = bSavedOrientRotationToMovement;
     }
-
-    UE_LOG(LogTemp, Log, TEXT("LockOn: Cleared"));
 }
 
 // 락온 타겟 찾기
@@ -1004,7 +965,5 @@ void AMechaCharacterBase::PlayHitReactFromDirection(const FVector& AttackWorldLo
 
         // 해당 방향 섹션으로 점프
         Anim->Montage_JumpToSection(SectionName, HitReactMontage);
-
-        UE_LOG(LogTemp, Verbose, TEXT("HitReact: Section %s"), *SectionName.ToString());
     }
 }

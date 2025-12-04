@@ -1,6 +1,5 @@
 // BossHealthWidget.cpp
 // 보스 체력바 위젯 구현
-// Boss Health Bar Widget Implementation
 
 #include "BossHealthWidget.h"
 #include "AbilitySystemComponent.h"
@@ -13,7 +12,6 @@
 
 // ========================================
 // 보스 정보로 초기화
-// Initialize with boss info
 // ========================================
 void UBossHealthWidget::InitWithBoss(UAbilitySystemComponent* InASC, UMechaAttributeSet* InAttributes, const FText& InBossName)
 {
@@ -37,7 +35,6 @@ void UBossHealthWidget::InitWithBoss(UAbilitySystemComponent* InASC, UMechaAttri
 
 // ========================================
 // 체력 업데이트
-// Update health
 // ========================================
 void UBossHealthWidget::ApplyHealth(float NewHealth, float MaxHealth)
 {
@@ -46,7 +43,6 @@ void UBossHealthWidget::ApplyHealth(float NewHealth, float MaxHealth)
 
 // ========================================
 // 체력바 갱신
-// Update health bar
 // ========================================
 void UBossHealthWidget::UpdateHealthBar(float NewHealth, float MaxHealth)
 {
@@ -103,7 +99,6 @@ void UBossHealthWidget::UpdateHealthBar(float NewHealth, float MaxHealth)
 
 // ========================================
 // 보스 체력바 표시
-// Show boss health bar
 // ========================================
 void UBossHealthWidget::ShowBossHealth()
 {
@@ -117,7 +112,6 @@ void UBossHealthWidget::ShowBossHealth()
 
 // ========================================
 // 보스 체력바 숨김
-// Hide boss health bar
 // ========================================
 void UBossHealthWidget::HideBossHealth()
 {
@@ -126,7 +120,6 @@ void UBossHealthWidget::HideBossHealth()
 
 // ========================================
 // 보스 사망 처리
-// Handle boss death
 // ========================================
 void UBossHealthWidget::OnBossDead()
 {
@@ -163,7 +156,6 @@ void UBossHealthWidget::OnBossDead()
 
 // ========================================
 // 위젯 소멸 시 정리
-// Cleanup on widget destruction
 // ========================================
 void UBossHealthWidget::NativeDestruct()
 {
