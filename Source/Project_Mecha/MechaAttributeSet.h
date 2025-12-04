@@ -5,12 +5,10 @@
 #include "AttributeSet.h"
 #include "AbilitySystemComponent.h"
 #include "GameplayEffectExtension.h"
-#include "Net/UnrealNetwork.h"
 #include "MechaAttributeSet.generated.h"
 
 // 역할(Role)
 // - 캐릭터의 핵심 수치(Health/Energy/MoveSpeed)와 탄약(탄창/예비탄)을 GAS Attribute로 보관
-// - 서버 권위로 수정되고, RepNotify를 통해 클라이언트로 동기화됨
 // - ATTRIBUTE_ACCESSORS로 BP/C++에서 손쉽게 접근 가능
 
 #define ATTRIBUTE_ACCESSORS(ClassName, PropertyName) \
@@ -28,54 +26,45 @@ public:
     UMechaAttributeSet();
 
     // Vital
-    UPROPERTY(BlueprintReadOnly, Category="Attributes|Vital", ReplicatedUsing=OnRep_Health)
+    UPROPERTY(BlueprintReadOnly, Category="Attributes|Vital")
     FGameplayAttributeData Health;
     ATTRIBUTE_ACCESSORS(UMechaAttributeSet, Health)
-    UFUNCTION() void OnRep_Health(const FGameplayAttributeData& OldValue);
 
-    UPROPERTY(BlueprintReadOnly, Category="Attributes|Vital", ReplicatedUsing=OnRep_MaxHealth)
+    UPROPERTY(BlueprintReadOnly, Category="Attributes|Vital")
     FGameplayAttributeData MaxHealth;
     ATTRIBUTE_ACCESSORS(UMechaAttributeSet, MaxHealth)
-    UFUNCTION() void OnRep_MaxHealth(const FGameplayAttributeData& OldValue);
 
-    UPROPERTY(BlueprintReadOnly, Category="Attributes|Vital", ReplicatedUsing=OnRep_Energy)
+    UPROPERTY(BlueprintReadOnly, Category="Attributes|Vital")
     FGameplayAttributeData Energy;
     ATTRIBUTE_ACCESSORS(UMechaAttributeSet, Energy)
-    UFUNCTION() void OnRep_Energy(const FGameplayAttributeData& OldValue);
 
-    UPROPERTY(BlueprintReadOnly, Category="Attributes|Vital", ReplicatedUsing=OnRep_MaxEnergy)
+    UPROPERTY(BlueprintReadOnly, Category="Attributes|Vital")
     FGameplayAttributeData MaxEnergy;
     ATTRIBUTE_ACCESSORS(UMechaAttributeSet, MaxEnergy)
-    UFUNCTION() void OnRep_MaxEnergy(const FGameplayAttributeData& OldValue);
 
     // Movement
-    UPROPERTY(BlueprintReadOnly, Category="Attributes|Movement", ReplicatedUsing=OnRep_MoveSpeed)
+    UPROPERTY(BlueprintReadOnly, Category="Attributes|Movement")
     FGameplayAttributeData MoveSpeed;
     ATTRIBUTE_ACCESSORS(UMechaAttributeSet, MoveSpeed)
-    UFUNCTION() void OnRep_MoveSpeed(const FGameplayAttributeData& OldValue);
 
     UPROPERTY(BlueprintReadOnly, Category="Attributes|Movement")
     FGameplayAttributeData MoveSpeedMultiplier;
     ATTRIBUTE_ACCESSORS(UMechaAttributeSet, MoveSpeedMultiplier)
 
     // Ammo (탄창 + 예비탄)
-    UPROPERTY(BlueprintReadOnly, Category="Attributes|Ammo", ReplicatedUsing=OnRep_AmmoMagazine)
+    UPROPERTY(BlueprintReadOnly, Category="Attributes|Ammo")
     FGameplayAttributeData AmmoMagazine;
     ATTRIBUTE_ACCESSORS(UMechaAttributeSet, AmmoMagazine)
-    UFUNCTION() void OnRep_AmmoMagazine(const FGameplayAttributeData& OldValue);
 
-    UPROPERTY(BlueprintReadOnly, Category="Attributes|Ammo", ReplicatedUsing=OnRep_MaxMagazine)
+    UPROPERTY(BlueprintReadOnly, Category="Attributes|Ammo")
     FGameplayAttributeData MaxMagazine;
     ATTRIBUTE_ACCESSORS(UMechaAttributeSet, MaxMagazine)
-    UFUNCTION() void OnRep_MaxMagazine(const FGameplayAttributeData& OldValue);
 
-    UPROPERTY(BlueprintReadOnly, Category="Attributes|Ammo", ReplicatedUsing=OnRep_AmmoReserve)
+    UPROPERTY(BlueprintReadOnly, Category="Attributes|Ammo")
     FGameplayAttributeData AmmoReserve;
     ATTRIBUTE_ACCESSORS(UMechaAttributeSet, AmmoReserve)
-    UFUNCTION() void OnRep_AmmoReserve(const FGameplayAttributeData& OldValue);
 
     // Overrides
-    virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
     virtual void PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue) override;
     virtual void PostGameplayEffectExecute(const struct FGameplayEffectModCallbackData& Data) override;
 

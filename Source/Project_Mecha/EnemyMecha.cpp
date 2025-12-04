@@ -33,14 +33,11 @@
 // ========================================
 AEnemyMecha::AEnemyMecha()
 {
-	bReplicates = true;
 	PrimaryActorTick.bCanEverTick = true;
 	CurrentTarget = nullptr;
 
 	// ========== GAS 초기화 ==========
 	AbilitySystem = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystem"));
-	AbilitySystem->SetIsReplicated(true);
-	AbilitySystem->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
 
 	AttributeSet = CreateDefaultSubobject<UMechaAttributeSet>(TEXT("AttributeSet"));
 
@@ -93,8 +90,7 @@ void AEnemyMecha::BeginPlay()
 	{
 		AbilitySystem->InitAbilityActorInfo(this, this);
 
-		// ========== 서버에서 능력 부여 ==========
-		if (HasAuthority())
+		// ========== 능력 부여 ==========
 		{
 			// 미사일 능력 등록
 			if (MissileAbilityClass_Enemy)

@@ -318,7 +318,7 @@ void UGA_AssaultBoost::ApplyCameraEffects()
 	{
 		if (APlayerController* PC = Cast<APlayerController>(OwnerChar->GetController()))
 		{
-			PC->ClientStartCameraShake(BoostCameraShake);
+			PC->PlayerCameraManager->StartCameraShake(BoostCameraShake);
 		}
 	}
 }

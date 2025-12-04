@@ -35,7 +35,6 @@
 // ========================================
 AMechaCharacterBase::AMechaCharacterBase()
 {
-    bReplicates = true;
     PrimaryActorTick.bCanEverTick = true;
 
     // ========== 카메라 설정 ==========
@@ -62,9 +61,6 @@ AMechaCharacterBase::AMechaCharacterBase()
 
     // ========== GAS 초기화 ==========
     AbilitySystem = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystem"));
-    AbilitySystem->SetIsReplicated(true);
-    AbilitySystem->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
-
     AttributeSet = CreateDefaultSubobject<UMechaAttributeSet>(TEXT("AttributeSet"));
 
     // ========== 총구 위치 컴포넌트 ==========
@@ -144,8 +140,8 @@ void AMechaCharacterBase::BeginPlay()
         }
     }
 
-    // ========== 서버에서 스탯 초기화 ==========
-    if (HasAuthority() && AbilitySystem)
+    // ========== 스탯 초기화 ==========
+    if (AbilitySystem)
     {
         FGameplayEffectContextHandle Ctx = AbilitySystem->MakeEffectContext();
         Ctx.AddSourceObject(this);
@@ -241,8 +237,7 @@ void AMechaCharacterBase::InitASCOnce()
         AbilitySystem->AddLooseGameplayTags(DefaultOwnedTags);
     }
 
-    // ========== 시작 능력 부여 (서버에서만) ==========
-    if (HasAuthority())
+    // ========== 시작 능력 부여 ==========
     {
         for (int32 i = 0; i < StartupAbilities.Num(); ++i)
         {

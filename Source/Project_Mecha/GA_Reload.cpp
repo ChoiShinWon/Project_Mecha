@@ -16,9 +16,6 @@ UGA_Reload::UGA_Reload()
 {
 	// 액터마다 하나의 인스턴스만 생성
 	InstancingPolicy   = EGameplayAbilityInstancingPolicy::InstancedPerActor;
-	
-	// 클라이언트에서 예측 실행, 서버에서 확정
-	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::LocalPredicted;
 }
 
 // ========================================
@@ -86,8 +83,7 @@ void UGA_Reload::OnReloadDelayFinished()
 		return;
 	}
 
-	// ========== 탄약 이전 (서버에서만) ==========
-	if (GetAvatarActorFromActorInfo()->HasAuthority())
+	// ========== 탄약 이전 ==========
 	{
 		const float Mag = ASC->GetNumericAttribute(UMechaAttributeSet::GetAmmoMagazineAttribute());
 		const float Max = ASC->GetNumericAttribute(UMechaAttributeSet::GetMaxMagazineAttribute());

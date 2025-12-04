@@ -2,7 +2,6 @@
 // GAS Attribute Set - 체력, 에너지, 이동 속도, 탄약 관리
 
 #include "MechaAttributeSet.h"
-#include "Net/UnrealNetwork.h"
 
 // ========================================
 // 생성자 - 기본값 설정
@@ -26,25 +25,6 @@ UMechaAttributeSet::UMechaAttributeSet()
 	InitAmmoMagazine(30.f);   // 탄창
 	InitMaxMagazine(30.f);    // 최대 탄창
 	InitAmmoReserve(90.f);    // 예비탄
-}
-
-// ========================================
-// 네트워크 복제 설정
-// ========================================
-void UMechaAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
-{
-	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-
-	// 모든 Attribute를 클라이언트에 복제
-	DOREPLIFETIME_CONDITION_NOTIFY(UMechaAttributeSet, Health,        COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UMechaAttributeSet, MaxHealth,     COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UMechaAttributeSet, Energy,        COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UMechaAttributeSet, MaxEnergy,     COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UMechaAttributeSet, MoveSpeed,     COND_None, REPNOTIFY_Always);
-
-	DOREPLIFETIME_CONDITION_NOTIFY(UMechaAttributeSet, AmmoMagazine,  COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UMechaAttributeSet, MaxMagazine,   COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UMechaAttributeSet, AmmoReserve,   COND_None, REPNOTIFY_Always);
 }
 
 // ========================================
@@ -96,45 +76,3 @@ void UMechaAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallb
 	}
 }
 
-// ========================================
-// 복제 알림 함수들
-// ========================================
-void UMechaAttributeSet::OnRep_Health(const FGameplayAttributeData& OldValue)       
-{ 
-	GAMEPLAYATTRIBUTE_REPNOTIFY(UMechaAttributeSet, Health, OldValue); 
-}
-
-void UMechaAttributeSet::OnRep_MaxHealth(const FGameplayAttributeData& OldValue)    
-{ 
-	GAMEPLAYATTRIBUTE_REPNOTIFY(UMechaAttributeSet, MaxHealth, OldValue); 
-}
-
-void UMechaAttributeSet::OnRep_Energy(const FGameplayAttributeData& OldValue)       
-{ 
-	GAMEPLAYATTRIBUTE_REPNOTIFY(UMechaAttributeSet, Energy, OldValue); 
-}
-
-void UMechaAttributeSet::OnRep_MaxEnergy(const FGameplayAttributeData& OldValue)    
-{ 
-	GAMEPLAYATTRIBUTE_REPNOTIFY(UMechaAttributeSet, MaxEnergy, OldValue); 
-}
-
-void UMechaAttributeSet::OnRep_MoveSpeed(const FGameplayAttributeData& OldValue)    
-{ 
-	GAMEPLAYATTRIBUTE_REPNOTIFY(UMechaAttributeSet, MoveSpeed, OldValue); 
-}
-
-void UMechaAttributeSet::OnRep_AmmoMagazine(const FGameplayAttributeData& OldValue) 
-{ 
-	GAMEPLAYATTRIBUTE_REPNOTIFY(UMechaAttributeSet, AmmoMagazine, OldValue); 
-}
-
-void UMechaAttributeSet::OnRep_MaxMagazine(const FGameplayAttributeData& OldValue)  
-{ 
-	GAMEPLAYATTRIBUTE_REPNOTIFY(UMechaAttributeSet, MaxMagazine, OldValue); 
-}
-
-void UMechaAttributeSet::OnRep_AmmoReserve(const FGameplayAttributeData& OldValue)  
-{ 
-	GAMEPLAYATTRIBUTE_REPNOTIFY(UMechaAttributeSet, AmmoReserve, OldValue); 
-}

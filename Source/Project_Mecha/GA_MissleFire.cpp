@@ -21,9 +21,6 @@ UGA_MissleFire::UGA_MissleFire()
 {
 	// 액터마다 하나의 인스턴스만 생성
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
-	
-	// 클라이언트에서 예측 실행, 서버에서 확정
-	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::LocalPredicted;
 
 	// 쿨타임 태그 등록
 	Tag_CooldownMissile = FGameplayTag::RequestGameplayTag(TEXT("Cooldown.MissileFire"));
@@ -52,13 +49,6 @@ void UGA_MissleFire::ActivateAbility(
 	if (!OwnerChar || !MissleProjectileClass)
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-		return;
-	}
-
-	// 서버에서만 미사일 스폰 실행
-	if (!OwnerChar->HasAuthority())
-	{
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
 		return;
 	}
 
@@ -164,9 +154,7 @@ void UGA_MissleFire::SpawnMissle(int32 Index, ACharacter* OwnerChar)
 
 	if (!Missle) return;
 
-	// ========== 네트워크 설정 ==========
-	Missle->SetReplicates(true);
-	Missle->SetReplicateMovement(true);
+	// ========== 기본 설정 ==========
 	Missle->SetActorEnableCollision(true);
 	Missle->SetActorTickEnabled(true);
 

@@ -11,9 +11,6 @@
 AMissionManager::AMissionManager()
 {
 	PrimaryActorTick.bCanEverTick = false;
-
-	// 멀티플레이어 환경일 때 서버에서만 관리하도록 하려면:
-	// bReplicates = true;
 }
 
 // ========================================
@@ -21,12 +18,6 @@ AMissionManager::AMissionManager()
 // ========================================
 void AMissionManager::StartMission()
 {
-	// 서버에서만 실행
-	if (!HasAuthority())
-	{
-		return;
-	}
-
 	// 카운터 초기화
 	CurrentKillCount = 0;
 	bMissionActive = true;
@@ -47,8 +38,8 @@ void AMissionManager::StartMission()
 // ========================================
 void AMissionManager::NotifyEnemyKilled(AEnemyMecha* KilledEnemy)
 {
-	// 서버에서만, 미션 활성화 상태에서만 처리
-	if (!HasAuthority() || !bMissionActive)
+	// 미션 활성화 상태에서만 처리
+	if (!bMissionActive)
 	{
 		return;
 	}
@@ -71,12 +62,6 @@ void AMissionManager::NotifyEnemyKilled(AEnemyMecha* KilledEnemy)
 // ========================================
 void AMissionManager::StartBossPhase()
 {
-	// 서버에서만 실행
-	if (!HasAuthority())
-	{
-		return;
-	}
-
 	// 이미 시작했으면 무시
 	if (bBossPhaseStarted)
 	{
@@ -94,12 +79,6 @@ void AMissionManager::StartBossPhase()
 // ========================================
 void AMissionManager::NotifyBossDefeated(AEnemyMecha* DefeatedBoss)
 {
-	// 서버에서만 실행
-	if (!HasAuthority())
-	{
-		return;
-	}
-
 	// 등록된 보스가 아니면 무시
 	if (DefeatedBoss != BossInstance)
 	{

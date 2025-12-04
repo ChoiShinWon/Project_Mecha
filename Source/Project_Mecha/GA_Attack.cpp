@@ -21,9 +21,6 @@ UGA_Attack::UGA_Attack()
 	// 액터마다 하나의 인스턴스만 생성
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
 	
-	// 클라이언트에서 예측 실행, 서버에서 확정
-	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::LocalPredicted;
-	
 	// 공격 능력 태그 추가
 	AbilityTags.AddTag(FGameplayTag::RequestGameplayTag(TEXT("Ability.Attack")));
 }

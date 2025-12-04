@@ -23,9 +23,6 @@ UGA_Dash_Enemy::UGA_Dash_Enemy()
 {
 	// 액터마다 하나의 인스턴스만 생성
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
-	
-	// 클라이언트에서 예측 실행, 서버에서 확정
-	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::LocalPredicted;
 
 	// ========== 게임플레이 태그 초기화 ==========
 	Tag_AbilityDash = FGameplayTag::RequestGameplayTag(TEXT("Ability.Dash.Enemy"));

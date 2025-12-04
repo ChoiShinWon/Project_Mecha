@@ -363,7 +363,7 @@ void UGA_Hover::ApplyCameraEffects()
 	{
 		if (APlayerController* PC = Cast<APlayerController>(OwnerCharacter->GetController()))
 		{
-			PC->ClientStartCameraShake(HoverCameraShake);
+			PC->PlayerCameraManager->StartCameraShake(HoverCameraShake);
 		}
 	}
 }

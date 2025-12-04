@@ -24,9 +24,6 @@ UGA_GunFire::UGA_GunFire()
 {
 	// 액터마다 하나의 인스턴스만 생성
 	InstancingPolicy   = EGameplayAbilityInstancingPolicy::InstancedPerActor;
-	
-	// 클라이언트에서 예측 실행, 서버에서 확정
-	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::LocalPredicted;
 }
 
 // ========================================
@@ -80,12 +77,9 @@ void UGA_GunFire::ActivateAbility(
 	// ========== 투사체 스폰 ==========
 	SpawnProjectile(ActorInfo);
 
-	// ========== 탄약 소모 (서버에서만) ==========
-	if (GetAvatarActorFromActorInfo()->HasAuthority())
-	{
-		// 탄창 1 감소
-		ASC->ApplyModToAttribute(UMechaAttributeSet::GetAmmoMagazineAttribute(), EGameplayModOp::Additive, -1.f);
-	}
+	// ========== 탄약 소모 ==========
+	// 탄창 1 감소
+	ASC->ApplyModToAttribute(UMechaAttributeSet::GetAmmoMagazineAttribute(), EGameplayModOp::Additive, -1.f);
 
 	// ========== 연사 간격 후 능력 종료 ==========
 	const float FireInterval = 0.3f;
@@ -184,27 +178,20 @@ void UGA_GunFire::SpawnProjectile(const FGameplayAbilityActorInfo* ActorInfo)
 		UGameplayStatics::SpawnEmitterAtLocation(Mecha->GetWorld(), MuzzleFlash, SpawnLoc, SpawnRot);
 	}
 
-	// ========== 4. 투사체 스폰 (서버에서만) ==========
-	if (Mecha->HasAuthority())
+	// ========== 4. 투사체 스폰 ==========
+	FActorSpawnParameters Params;
+	Params.Owner = Mecha;
+	Params.Instigator = Mecha;
+	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+	AActor* Projectile = Mecha->GetWorld()->SpawnActor<AActor>(Mecha->ProjectileClass, SpawnLoc, SpawnRot, Params);
+	if (Projectile)
 	{
-		FActorSpawnParameters Params;
-		Params.Owner = Mecha;
-		Params.Instigator = Mecha;
-		Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-
-		AActor* Projectile = Mecha->GetWorld()->SpawnActor<AActor>(Mecha->ProjectileClass, SpawnLoc, SpawnRot, Params);
-		if (Projectile)
+		// 발사 속도 설정
+		if (UProjectileMovementComponent* MoveComp = Projectile->FindComponentByClass<UProjectileMovementComponent>())
 		{
-			// 네트워크 복제 설정
-			Projectile->SetReplicates(true);
-			Projectile->SetReplicateMovement(true);
-
-			// 발사 속도 설정
-			if (UProjectileMovementComponent* MoveComp = Projectile->FindComponentByClass<UProjectileMovementComponent>())
-			{
-				MoveComp->Velocity = LaunchDir * MoveComp->InitialSpeed;
-				MoveComp->Activate();
-			}
+			MoveComp->Velocity = LaunchDir * MoveComp->InitialSpeed;
+			MoveComp->Activate();
 		}
 	}
 }
