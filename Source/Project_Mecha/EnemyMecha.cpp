@@ -24,6 +24,7 @@
 #include "Components/WidgetComponent.h"
 #include "EnemyHUDWidget.h"
 #include "BossHealthWidget.h"
+#include "WBP_GameComplete.h"
 #include "Blueprint/UserWidget.h"
 #include "Animation/AnimInstance.h"
 #include "Particles/ParticleSystemComponent.h"
@@ -644,6 +645,26 @@ void AEnemyMecha::RestoreNormalTime()
 
     // 전역 시간 배율을 1.0 (정상)으로 복원
     UGameplayStatics::SetGlobalTimeDilation(World, 1.0f);
+
+    // 보스 사망 시 게임 종료 위젯 표시
+    if (bIsBoss && GameCompleteWidgetClass)
+    {
+        // 플레이어 컨트롤러 찾기
+        APlayerController* PC = UGameplayStatics::GetPlayerController(World, 0);
+        if (PC && !GameCompleteWidget)
+        {
+            // 위젯 생성
+            GameCompleteWidget = CreateWidget<UWBP_GameComplete>(PC, GameCompleteWidgetClass);
+            if (GameCompleteWidget)
+            {
+                // 뷰포트에 추가 (ZOrder를 높게 설정하여 다른 UI 위에 표시)
+                GameCompleteWidget->AddToViewport(200);
+                
+                // 게임 종료 화면 표시 (페이드 인 효과)
+                GameCompleteWidget->ShowGameComplete(2.0f);
+            }
+        }
+    }
 }
 
 // ========================================

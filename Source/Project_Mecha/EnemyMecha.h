@@ -17,6 +17,7 @@ class UWidgetComponent;
 class AMissionManager;
 class UAnimMontage;
 class UBossHealthWidget;
+class UWBP_GameComplete;
 struct FOnAttributeChangeData;
 
 UCLASS()
@@ -88,6 +89,10 @@ public:
     // 보스 체력바 위젯 클래스 (블루프린트에서 설정)
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boss")
     TSubclassOf<UBossHealthWidget> BossHealthWidgetClass;
+
+    // 게임 종료 위젯 클래스 (블루프린트에서 설정)
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Boss")
+    TSubclassOf<UWBP_GameComplete> GameCompleteWidgetClass;
 
     // === 보스 사망 슬로우 모션 ===
     // 보스 사망 시 슬로우 모션 사용 여부
@@ -208,6 +213,10 @@ protected:
     // 보스 체력바 위젯 인스턴스
     UPROPERTY()
     UBossHealthWidget* BossHealthWidget = nullptr;
+
+    // 게임 종료 위젯 인스턴스
+    UPROPERTY()
+    UWBP_GameComplete* GameCompleteWidget = nullptr;
 
 protected:
     virtual void BeginPlay() override;
