@@ -7,6 +7,7 @@
 #include "Components/Image.h"
 #include "Components/TextBlock.h"
 #include "Kismet/GameplayStatics.h"
+#include "Kismet/KismetSystemLibrary.h"
 #include "GameFramework/PlayerController.h"
 
 void UWBP_GameComplete::NativeConstruct()
@@ -42,6 +43,15 @@ void UWBP_GameComplete::ShowGameComplete(float FadeInDuration)
 			0.016f,  // ~60fps
 			true
 		);
+
+		// 게임 종료 타이머 시작 (5초 후)
+		World->GetTimerManager().SetTimer(
+			GameEndTimerHandle,
+			this,
+			&UWBP_GameComplete::QuitGameAfterDelay,
+			GameEndDelay,
+			false
+		);
 	}
 
 	// 블루프린트 이벤트 호출
@@ -54,6 +64,7 @@ void UWBP_GameComplete::HideGameComplete()
 	if (UWorld* World = GetWorld())
 	{
 		World->GetTimerManager().ClearTimer(FadeInTimerHandle);
+		World->GetTimerManager().ClearTimer(GameEndTimerHandle);
 	}
 
 	SetVisibility(ESlateVisibility::Hidden);
@@ -113,5 +124,30 @@ void UWBP_GameComplete::GoToMainMenu()
 
 	// 메인 메뉴로 이동
 	UGameplayStatics::OpenLevel(World, MainMenuLevelName, false);
+}
+
+// ========================================
+// 게임 종료 (5초 후 자동 호출)
+// ========================================
+void UWBP_GameComplete::QuitGameAfterDelay()
+{
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	// 플레이어 컨트롤러 가져오기
+	APlayerController* PC = UGameplayStatics::GetPlayerController(World, 0);
+	if (PC)
+	{
+		// 게임 종료
+		UKismetSystemLibrary::QuitGame(
+			World,
+			PC,
+			EQuitPreference::Quit,
+			false
+		);
+	}
 }
 

@@ -40,9 +40,19 @@ protected:
 
 	void UpdateFadeIn();
 
+	// 게임 종료 타이머
+	FTimerHandle GameEndTimerHandle;
+	
+	// 게임 종료 함수 (5초 후 자동 호출)
+	void QuitGameAfterDelay();
+
 	// 메인 메뉴 레벨 이름 (블루프린트에서 설정 가능)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GameComplete|Settings")
 	FName MainMenuLevelName = FName(TEXT("MainMenu"));
+
+	// 게임 종료까지 대기 시간 (초)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GameComplete|Settings")
+	float GameEndDelay = 5.0f;
 
 	// 게임 종료 화면 표시 후 블루프린트 이벤트 호출
 	UFUNCTION(BlueprintImplementableEvent, Category = "GameComplete")

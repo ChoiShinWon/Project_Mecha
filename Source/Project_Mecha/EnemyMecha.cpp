@@ -692,3 +692,25 @@ void AEnemyMecha::OnDeathMontageEnded(UAnimMontage* Montage, bool bInterrupted)
         Destroy();
     }
 }
+
+// ========================================
+// Blackboard 전투 상태 초기화 (디버깅/복구용)
+// ========================================
+void AEnemyMecha::ResetBlackboardCombatState()
+{
+    if (AAIController* AICon = Cast<AAIController>(GetController()))
+    {
+        if (UBlackboardComponent* BB = AICon->GetBlackboardComponent())
+        {
+            // 전투 상태 플래그 초기화
+            BB->SetValueAsBool(TEXT("IsAttacking"), false);
+            BB->SetValueAsBool(TEXT("IsDashing"), false);
+            BB->SetValueAsBool(TEXT("ShouldDash"), false);
+            
+            // 범위 플래그 초기화 (Service가 다시 업데이트할 것)
+            BB->SetValueAsBool(TEXT("InHookRange"), false);
+            BB->SetValueAsBool(TEXT("InUppercutRange"), false);
+            BB->SetValueAsBool(TEXT("InFireRange"), false);
+        }
+    }
+}

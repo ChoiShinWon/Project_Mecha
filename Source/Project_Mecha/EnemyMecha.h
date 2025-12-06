@@ -296,5 +296,10 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "Enemy|Abilities")
     void FireHoverAbility();
+
+    // === 디버깅/복구 함수 ===
+    // Blackboard 상태 초기화 (보스가 멈췄을 때 사용)
+    UFUNCTION(BlueprintCallable, Category = "Enemy|Debug")
+    void ResetBlackboardCombatState();
     
 };
