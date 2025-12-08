@@ -131,6 +131,10 @@ protected:
     UFUNCTION() void Input_LockOnToggle(const FInputActionValue& Value);
 
 public:
+
+    UPROPERTY()
+    FGameplayTag Tag_Attacking;
+
     /** 총알 블루프린트 클래스 지정 (BP_Bullet) */
     UPROPERTY(EditDefaultsOnly, Category = "FireSocket")
     TSubclassOf<class AActor> ProjectileClass;
@@ -178,6 +182,7 @@ public:
     bool IsOverheated() const;
 
 protected:
+
     UPROPERTY(EditDefaultsOnly, Category = "GAS")
     int32 HoverInputID = 2;
 

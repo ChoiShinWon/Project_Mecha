@@ -23,6 +23,12 @@ UGA_Attack::UGA_Attack()
 	
 	// 공격 능력 태그 추가
 	AbilityTags.AddTag(FGameplayTag::RequestGameplayTag(TEXT("Ability.Attack")));
+
+	// === 공격 중 상태 태그 ===
+	AttackStateTag = FGameplayTag::RequestGameplayTag(TEXT("State.Attacking"));
+
+	// 이 어빌리티가 활성화되어 있는 동안 ASC에 자동으로 추가될 태그
+	ActivationOwnedTags.AddTag(AttackStateTag);
 }
 
 // ========================================

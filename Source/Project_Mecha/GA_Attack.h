@@ -90,4 +90,7 @@ protected:
     // 히트 사운드
     UPROPERTY(EditDefaultsOnly, Category = "FX")
     class USoundBase* HitSound = nullptr;
+
+    UPROPERTY(EditDefaultsOnly, Category = "Tags")
+    FGameplayTag AttackStateTag;
 };

@@ -231,6 +231,7 @@ void AMechaCharacterBase::InitASCOnce()
     Tag_Boosting = FGameplayTag::RequestGameplayTag(TEXT("State.Boosting"));
     Tag_Overheated = FGameplayTag::RequestGameplayTag(TEXT("State.Overheated"));
     Tag_StateHovering = FGameplayTag::RequestGameplayTag(TEXT("State.Hovering"));
+    Tag_Attacking = FGameplayTag::RequestGameplayTag(TEXT("State.Attacking"));
 
     // ========== 기본 소유 태그 적용 ==========
     if (DefaultOwnedTags.Num() > 0)
@@ -879,6 +880,13 @@ void AMechaCharacterBase::PlayHitReactFromDirection(const FVector& AttackWorldLo
     {
         return;
     }
+
+    // === 공격 중이면 HitReact 재생 안 함 ===
+    if (AbilitySystem && AbilitySystem->HasMatchingGameplayTag(Tag_Attacking))
+    {
+        return;
+    }
+
 
     if (!HitReactMontage || !GetMesh())
     {
