@@ -68,8 +68,8 @@ AEnemyMecha::AEnemyMecha()
 	// ========== Hover Particle 소켓 기본값 ==========
 	// 기본적으로 발 양쪽 소켓에 파티클 생성
 	// 블루프린트에서 필요에 따라 변경 가능
-	HoverParticleSockets.Add(TEXT("LeftFootSocket"));
-	HoverParticleSockets.Add(TEXT("RightFootSocket"));
+	HoverParticleSockets.Add(TEXT("Foot_L"));
+	HoverParticleSockets.Add(TEXT("Foot_R"));
 }
 
 // ========================================
