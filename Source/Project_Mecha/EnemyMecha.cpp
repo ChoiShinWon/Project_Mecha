@@ -230,7 +230,7 @@ void AEnemyMecha::InitializeAttributes()
 // Getter 함수들
 // ========================================
 float AEnemyMecha::GetHealth() const
-{
+{ 
     return AttributeSet ? AttributeSet->GetHealth() : 0.f;
 }
 
