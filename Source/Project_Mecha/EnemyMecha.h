@@ -77,6 +77,20 @@ public:
     UPROPERTY(BlueprintReadWrite, Category = "Hover")
     bool bHoverOnCooldown = false;  // true면 아직 다음 Hover 못씀
 
+    // === Hover Ability ===
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Abilities")
+    TSubclassOf<UGameplayAbility> HoverAbilityClass_Enemy;
+
+    UFUNCTION(BlueprintCallable, Category = "Enemy|Abilities")
+    void FireHoverAbility();
+
+    // === Boss 전용 Ability (미사일 레인 패턴) ===
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Abilities|Boss")
+    TSubclassOf<UGameplayAbility> BossMissileRainAbilityClass;
+
+    UFUNCTION(BlueprintCallable, Category = "Abilities|Boss")
+    void FireBossMissileRainAbility();
+
     // === 보스 관련 변수 ===
     // 이 적이 보스인지 여부 (블루프린트에서 설정)
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss")
@@ -190,10 +204,6 @@ protected:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "HitReact")
     float HitReactInterval = 0.4f;
 
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Abilities")
-    TSubclassOf<UGameplayAbility> HoverAbilityClass_Enemy;
-
-
     // 현재 HitReact를 재생할 수 있는 상태인지
     bool bCanPlayHitReact = true;
 
@@ -218,6 +228,11 @@ protected:
     UPROPERTY()
     UWBP_GameComplete* GameCompleteWidget = nullptr;
 
+    // === 체력/죽음 처리 ===
+    bool bIsDead = false;
+
+    FDelegateHandle HealthChangedHandle;
+
 protected:
     virtual void BeginPlay() override;
 
@@ -229,11 +244,6 @@ protected:
 
     // 스탯 초기화 (BeginPlay에서 한 번 호출)
     void InitializeAttributes();
-
-    // === 체력/죽음 처리 ===
-    bool bIsDead = false;
-
-    FDelegateHandle HealthChangedHandle;
 
     // 델리게이트 콜백
     void OnHealthChanged(const FOnAttributeChangeData& Data);
@@ -250,7 +260,7 @@ protected:
 
     // 슬로우 모션 시작/복원
     void StartDeathSlowMotion();
-    
+
     UFUNCTION()
     void RestoreNormalTime();
 
@@ -294,12 +304,8 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Enemy|HitReact")
     void PlayHitReact();
 
-    UFUNCTION(BlueprintCallable, Category = "Enemy|Abilities")
-    void FireHoverAbility();
-
     // === 디버깅/복구 함수 ===
     // Blackboard 상태 초기화 (보스가 멈췄을 때 사용)
     UFUNCTION(BlueprintCallable, Category = "Enemy|Debug")
     void ResetBlackboardCombatState();
-    
 };

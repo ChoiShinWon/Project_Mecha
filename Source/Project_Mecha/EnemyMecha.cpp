@@ -1,5 +1,5 @@
 ﻿// EnemyMecha.cpp
-// 적 메카 캐릭터 - GAS, AI, 체력 관리, 미사일/대시 능력
+// 적 메카 캐릭터 - GAS, AI, 체력 관리, 미사일/대시/호버/보스 패턴 능력
 
 #include "EnemyMecha.h"
 
@@ -34,42 +34,39 @@
 // ========================================
 AEnemyMecha::AEnemyMecha()
 {
-	PrimaryActorTick.bCanEverTick = true;
-	CurrentTarget = nullptr;
+    PrimaryActorTick.bCanEverTick = true;
+    CurrentTarget = nullptr;
 
-	// ========== GAS 초기화 ==========
-	AbilitySystem = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystem"));
+    // ========== GAS 초기화 ==========
+    AbilitySystem = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystem"));
+    AttributeSet = CreateDefaultSubobject<UMechaAttributeSet>(TEXT("AttributeSet"));
 
-	AttributeSet = CreateDefaultSubobject<UMechaAttributeSet>(TEXT("AttributeSet"));
+    // ========== AI 파라미터 기본값 ==========
+    AggroRadius = 2500.f;
+    MeleeRange = 200.f;
+    RangedRange = 1500.f;
+    PatrolRadius = 800.f;
+    LeashDistance = 5000.f;
 
-	// ========== AI 파라미터 기본값 ==========
-	AggroRadius = 2500.f;
-	MeleeRange = 200.f;
-	RangedRange = 1500.f;
-	PatrolRadius = 800.f;
-	LeashDistance = 5000.f;
+    // 발사 소켓 기본값
+    FireSocketName = TEXT("FireSocket");
 
-	// 발사 소켓 기본값
-	FireSocketName = TEXT("FireSocket");
+    // ========== Enemy HUD 위젯 컴포넌트 ==========
+    EnemyHUDWidgetComp = CreateDefaultSubobject<UWidgetComponent>(TEXT("EnemyHUDWidgetComp"));
+    EnemyHUDWidgetComp->SetupAttachment(GetRootComponent());
 
-	// ========== Enemy HUD 위젯 컴포넌트 ==========
-	EnemyHUDWidgetComp = CreateDefaultSubobject<UWidgetComponent>(TEXT("EnemyHUDWidgetComp"));
-	EnemyHUDWidgetComp->SetupAttachment(GetRootComponent());
+    // 머리 위에 배치
+    EnemyHUDWidgetComp->SetRelativeLocation(FVector(0.f, 0.f, 200.f));
+    EnemyHUDWidgetComp->SetWidgetSpace(EWidgetSpace::Screen);
+    EnemyHUDWidgetComp->SetDrawSize(FVector2D(200.f, 40.f));
 
-	// 머리 위에 배치
-	EnemyHUDWidgetComp->SetRelativeLocation(FVector(0.f, 0.f, 200.f));
-	EnemyHUDWidgetComp->SetWidgetSpace(EWidgetSpace::Screen);
-	EnemyHUDWidgetComp->SetDrawSize(FVector2D(200.f, 40.f));
+    // ========== HitReact 기본값 ==========
+    HitReactInterval = 0.4f;
+    bCanPlayHitReact = true;
 
-	// ========== HitReact 기본값 ==========
-	HitReactInterval = 0.4f;
-	bCanPlayHitReact = true;
-
-	// ========== Hover Particle 소켓 기본값 ==========
-	// 기본적으로 발 양쪽 소켓에 파티클 생성
-	// 블루프린트에서 필요에 따라 변경 가능
-	HoverParticleSockets.Add(TEXT("Foot_L"));
-	HoverParticleSockets.Add(TEXT("Foot_R"));
+    // ========== Hover Particle 소켓 기본값 ==========
+    HoverParticleSockets.Add(TEXT("Foot_L"));
+    HoverParticleSockets.Add(TEXT("Foot_R"));
 }
 
 // ========================================
@@ -77,7 +74,7 @@ AEnemyMecha::AEnemyMecha()
 // ========================================
 UAbilitySystemComponent* AEnemyMecha::GetAbilitySystemComponent() const
 {
-	return AbilitySystem;
+    return AbilitySystem;
 }
 
 // ========================================
@@ -85,62 +82,70 @@ UAbilitySystemComponent* AEnemyMecha::GetAbilitySystemComponent() const
 // ========================================
 void AEnemyMecha::BeginPlay()
 {
-	Super::BeginPlay();
+    Super::BeginPlay();
 
-	if (AbilitySystem)
-	{
-		AbilitySystem->InitAbilityActorInfo(this, this);
+    if (AbilitySystem)
+    {
+        AbilitySystem->InitAbilityActorInfo(this, this);
 
-		// ========== 능력 부여 ==========
-		{
-			// 미사일 능력 등록
-			if (MissileAbilityClass_Enemy)
-			{
-				AbilitySystem->GiveAbility(
-					FGameplayAbilitySpec(MissileAbilityClass_Enemy, 1, 0)
-				);
-			}
+        // ========== 능력 부여 ==========
+        {
+            // 미사일 능력 등록
+            if (MissileAbilityClass_Enemy)
+            {
+                AbilitySystem->GiveAbility(
+                    FGameplayAbilitySpec(MissileAbilityClass_Enemy, 1, 0)
+                );
+            }
 
-			// 대시 능력 등록
-			if (DashAbilityClass_Enemy)
-			{
-				AbilitySystem->GiveAbility(
-					FGameplayAbilitySpec(DashAbilityClass_Enemy, 1, 1)
-				);
-			}
+            // 대시 능력 등록
+            if (DashAbilityClass_Enemy)
+            {
+                AbilitySystem->GiveAbility(
+                    FGameplayAbilitySpec(DashAbilityClass_Enemy, 1, 1)
+                );
+            }
 
-			// 호버 능력 등록
-			if (HoverAbilityClass_Enemy)
-			{
-				AbilitySystem->GiveAbility(
-					FGameplayAbilitySpec(HoverAbilityClass_Enemy, 1, 2)
-				);
-			}
+            // 호버 능력 등록
+            if (HoverAbilityClass_Enemy)
+            {
+                AbilitySystem->GiveAbility(
+                    FGameplayAbilitySpec(HoverAbilityClass_Enemy, 1, 2)
+                );
+            }
 
-			// 미션 매니저 찾기
-			if (MissionManager == nullptr)
-			{
-				AActor* Found = UGameplayStatics::GetActorOfClass(GetWorld(), AMissionManager::StaticClass());
-				if (Found)
-				{
-					MissionManager = Cast<AMissionManager>(Found);
-				}
-			}
+            // === Boss 미사일 레인 Ability 등록 ===
+            if (bIsBoss && BossMissileRainAbilityClass)
+            {
+                AbilitySystem->GiveAbility(
+                    FGameplayAbilitySpec(BossMissileRainAbilityClass, 1, 3)
+                );
+            }
 
-			// HUD 초기화 (서버)
-			if (EnemyHUDWidgetComp && AbilitySystem && AttributeSet)
-			{
-				UUserWidget* WidgetObject = EnemyHUDWidgetComp->GetUserWidgetObject();
-				if (UEnemyHUDWidget* EnemyHUD = Cast<UEnemyHUDWidget>(WidgetObject))
-				{
-					EnemyHUD->InitWithASC(AbilitySystem, AttributeSet);
-				}
-			}
-		}
-	}
+            // 미션 매니저 찾기
+            if (MissionManager == nullptr)
+            {
+                AActor* Found = UGameplayStatics::GetActorOfClass(GetWorld(), AMissionManager::StaticClass());
+                if (Found)
+                {
+                    MissionManager = Cast<AMissionManager>(Found);
+                }
+            }
 
-	// 스폰 위치 저장 (AI 패트롤 기준점)
-	HomeLocation = GetActorLocation();
+            // HUD 초기화 (서버)
+            if (EnemyHUDWidgetComp && AbilitySystem && AttributeSet)
+            {
+                UUserWidget* WidgetObject = EnemyHUDWidgetComp->GetUserWidgetObject();
+                if (UEnemyHUDWidget* EnemyHUD = Cast<UEnemyHUDWidget>(WidgetObject))
+                {
+                    EnemyHUD->InitWithASC(AbilitySystem, AttributeSet);
+                }
+            }
+        }
+    }
+
+    // 스폰 위치 저장 (AI 패트롤 기준점)
+    HomeLocation = GetActorLocation();
 
     // 스탯 초기화
     InitializeAttributes();
@@ -152,48 +157,46 @@ void AEnemyMecha::BeginPlay()
     }
 
     // ========== 체력 변경 델리게이트 바인딩 ==========
-	if (AbilitySystem && AttributeSet)
-	{
-		HealthChangedHandle =
-			AbilitySystem
-			->GetGameplayAttributeValueChangeDelegate(UMechaAttributeSet::GetHealthAttribute())
-			.AddUObject(this, &AEnemyMecha::OnHealthChanged);
-	}
+    if (AbilitySystem && AttributeSet)
+    {
+        HealthChangedHandle =
+            AbilitySystem
+            ->GetGameplayAttributeValueChangeDelegate(UMechaAttributeSet::GetHealthAttribute())
+            .AddUObject(this, &AEnemyMecha::OnHealthChanged);
+    }
 
-	// HUD 초기화 (클라이언트 포함)
-	if (EnemyHUDWidgetComp && AbilitySystem && AttributeSet)
-	{
-		UUserWidget* WidgetObject = EnemyHUDWidgetComp->GetUserWidgetObject();
-		if (UEnemyHUDWidget* EnemyHUD = Cast<UEnemyHUDWidget>(WidgetObject))
-		{
-			EnemyHUD->InitWithASC(AbilitySystem, AttributeSet);
-		}
-	}
+    // HUD 초기화 (클라이언트 포함)
+    if (EnemyHUDWidgetComp && AbilitySystem && AttributeSet)
+    {
+        UUserWidget* WidgetObject = EnemyHUDWidgetComp->GetUserWidgetObject();
+        if (UEnemyHUDWidget* EnemyHUD = Cast<UEnemyHUDWidget>(WidgetObject))
+        {
+            EnemyHUD->InitWithASC(AbilitySystem, AttributeSet);
+        }
+    }
 
-	// ========== Hover Particle 컴포넌트 동적 생성 ==========
-	if (HoverParticleSystem && GetMesh())
-	{
-		for (const FName& SocketName : HoverParticleSockets)
-		{
-			// 소켓이 존재하는지 확인
-			if (GetMesh()->DoesSocketExist(SocketName))
-			{
-				// 파티클 컴포넌트 생성
-				UParticleSystemComponent* ParticleComp = NewObject<UParticleSystemComponent>(this);
-				if (ParticleComp)
-				{
-					ParticleComp->SetTemplate(HoverParticleSystem);
-					ParticleComp->bAutoActivate = false;  // 기본적으로 비활성화
-					ParticleComp->SetupAttachment(GetMesh(), SocketName);
-					ParticleComp->SetRelativeScale3D(HoverParticleScale);  // 스케일 적용
-					ParticleComp->SetRelativeRotation(HoverParticleRotation);  // 회전 적용
-					ParticleComp->RegisterComponent();
+    // ========== Hover Particle 컴포넌트 동적 생성 ==========
+    if (HoverParticleSystem && GetMesh())
+    {
+        for (const FName& SocketName : HoverParticleSockets)
+        {
+            if (GetMesh()->DoesSocketExist(SocketName))
+            {
+                UParticleSystemComponent* ParticleComp = NewObject<UParticleSystemComponent>(this);
+                if (ParticleComp)
+                {
+                    ParticleComp->SetTemplate(HoverParticleSystem);
+                    ParticleComp->bAutoActivate = false;
+                    ParticleComp->SetupAttachment(GetMesh(), SocketName);
+                    ParticleComp->SetRelativeScale3D(HoverParticleScale);
+                    ParticleComp->SetRelativeRotation(HoverParticleRotation);
+                    ParticleComp->RegisterComponent();
 
-					HoverParticleComponents.Add(ParticleComp);
-				}
-			}
-		}
-	}
+                    HoverParticleComponents.Add(ParticleComp);
+                }
+            }
+        }
+    }
 }
 
 // ========================================
@@ -201,28 +204,26 @@ void AEnemyMecha::BeginPlay()
 // ========================================
 void AEnemyMecha::InitializeAttributes()
 {
-	if (!AbilitySystem || !InitAttributesEffect)
-	{
-		return;
-	}
+    if (!AbilitySystem || !InitAttributesEffect)
+    {
+        return;
+    }
 
-	// GE 적용
-	FGameplayEffectContextHandle ContextHandle = AbilitySystem->MakeEffectContext();
-	ContextHandle.AddSourceObject(this);
+    FGameplayEffectContextHandle ContextHandle = AbilitySystem->MakeEffectContext();
+    ContextHandle.AddSourceObject(this);
 
-	FGameplayEffectSpecHandle SpecHandle =
-		AbilitySystem->MakeOutgoingSpec(InitAttributesEffect, 1.f, ContextHandle);
+    FGameplayEffectSpecHandle SpecHandle =
+        AbilitySystem->MakeOutgoingSpec(InitAttributesEffect, 1.f, ContextHandle);
 
-	if (SpecHandle.IsValid())
-	{
-		AbilitySystem->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+    if (SpecHandle.IsValid())
+    {
+        AbilitySystem->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
 
-		// 체력을 최대치로 설정
-		if (AttributeSet)
-		{
-			AttributeSet->SetHealth(AttributeSet->GetMaxHealth());
-		}
-	}
+        if (AttributeSet)
+        {
+            AttributeSet->SetHealth(AttributeSet->GetMaxHealth());
+        }
+    }
 }
 
 // ========================================
@@ -230,17 +231,17 @@ void AEnemyMecha::InitializeAttributes()
 // ========================================
 float AEnemyMecha::GetHealth() const
 {
-	return AttributeSet ? AttributeSet->GetHealth() : 0.f;
+    return AttributeSet ? AttributeSet->GetHealth() : 0.f;
 }
 
 float AEnemyMecha::GetMaxHealth() const
 {
-	return AttributeSet ? AttributeSet->GetMaxHealth() : 0.f;
+    return AttributeSet ? AttributeSet->GetMaxHealth() : 0.f;
 }
 
 void AEnemyMecha::ReInitializeAttributes()
 {
-	InitializeAttributes();
+    InitializeAttributes();
 }
 
 // ========================================
@@ -248,44 +249,40 @@ void AEnemyMecha::ReInitializeAttributes()
 // ========================================
 void AEnemyMecha::HandleDeath()
 {
-	// ========== AI/BT 정지 ==========
-	if (AAIController* AICon = Cast<AAIController>(GetController()))
-	{
-		if (UBrainComponent* Brain = AICon->GetBrainComponent())
-		{
-			Brain->StopLogic(TEXT("Dead"));
-		}
+    // ========== AI/BT 정지 ==========
+    if (AAIController* AICon = Cast<AAIController>(GetController()))
+    {
+        if (UBrainComponent* Brain = AICon->GetBrainComponent())
+        {
+            Brain->StopLogic(TEXT("Dead"));
+        }
 
-		if (UBlackboardComponent* BB = AICon->GetBlackboardComponent())
-		{
-			BB->SetValueAsBool(TEXT("IsDead"), true);
-		}
-	}
+        if (UBlackboardComponent* BB = AICon->GetBlackboardComponent())
+        {
+            BB->SetValueAsBool(TEXT("IsDead"), true);
+        }
+    }
 
-	// ========== 이동 정지 ==========
-	if (auto* Move = GetCharacterMovement())
-	{
-		Move->StopMovementImmediately();
-		Move->DisableMovement();
-	}
+    // ========== 이동 정지 ==========
+    if (auto* Move = GetCharacterMovement())
+    {
+        Move->StopMovementImmediately();
+        Move->DisableMovement();
+    }
 
-	// ========== 사망 애니메이션 재생 ==========
-	if (DeathMontage)
-	{
-		if (UAnimInstance* AnimInst = GetMesh()->GetAnimInstance())
-		{
-			// Montage 재생
-			AnimInst->Montage_Play(DeathMontage);
-
-			// Montage 블렌드 아웃 시작 시 이벤트 바인딩 (더 빠른 타이밍)
-			AnimInst->OnMontageBlendingOut.AddDynamic(this, &AEnemyMecha::OnDeathMontageEnded);
-		}
-	}
-	else
-	{
-		// Montage가 없으면 바로 제거
-		SetLifeSpan(0.1f);
-	}
+    // ========== 사망 애니메이션 재생 ==========
+    if (DeathMontage)
+    {
+        if (UAnimInstance* AnimInst = GetMesh()->GetAnimInstance())
+        {
+            AnimInst->Montage_Play(DeathMontage);
+            AnimInst->OnMontageBlendingOut.AddDynamic(this, &AEnemyMecha::OnDeathMontageEnded);
+        }
+    }
+    else
+    {
+        SetLifeSpan(0.1f);
+    }
 
     // ========== HUD 정리 ==========
     if (EnemyHUDWidgetComp)
@@ -313,10 +310,10 @@ void AEnemyMecha::HandleDeath()
     }
 
     // ========== 미션 매니저에 킬 보고 ==========
-	if (MissionManager)
-	{
-		MissionManager->NotifyEnemyKilled(this);
-	}
+    if (MissionManager)
+    {
+        MissionManager->NotifyEnemyKilled(this);
+    }
 }
 
 // ========================================
@@ -345,27 +342,24 @@ void AEnemyMecha::OnHealthChanged(const FOnAttributeChangeData& Data)
         UpdateBossHealthWidget(NewHealth, MaxHealth);
     }
 
-    // 이미 죽었으면 더 처리 안 함
     if (bIsDead)
-	{
-		return;
-	}
+    {
+        return;
+    }
 
-	// ========== 체력이 0 이하로 떨어지면 사망 ==========
-	if (NewHealth <= 0.f)
-	{
-		bIsDead = true;
+    if (NewHealth <= 0.f)
+    {
+        bIsDead = true;
 
-		// Dead 태그 추가
-		if (AbilitySystem)
-		{
-			AbilitySystem->AddLooseGameplayTag(
-				FGameplayTag::RequestGameplayTag(TEXT("State.Dead"))
-			);
-		}
+        if (AbilitySystem)
+        {
+            AbilitySystem->AddLooseGameplayTag(
+                FGameplayTag::RequestGameplayTag(TEXT("State.Dead"))
+            );
+        }
 
-		HandleDeath();
-	}
+        HandleDeath();
+    }
 }
 
 // ========================================
@@ -373,38 +367,35 @@ void AEnemyMecha::OnHealthChanged(const FOnAttributeChangeData& Data)
 // ========================================
 void AEnemyMecha::PlayHitReact()
 {
-	// 죽었거나, 몽타주가 없거나, 쿨타임 중이면 무시
-	if (bIsDead || !HitReactMontage || !bCanPlayHitReact)
-	{
-		return;
-	}
+    if (bIsDead || !HitReactMontage || !bCanPlayHitReact)
+    {
+        return;
+    }
 
-	bCanPlayHitReact = false;
+    bCanPlayHitReact = false;
 
-	UAnimInstance* AnimInst = (GetMesh() ? GetMesh()->GetAnimInstance() : nullptr);
-	if (!AnimInst)
-	{
-		ResetHitReactWindow();
-		return;
-	}
+    UAnimInstance* AnimInst = (GetMesh() ? GetMesh()->GetAnimInstance() : nullptr);
+    if (!AnimInst)
+    {
+        ResetHitReactWindow();
+        return;
+    }
 
-	// 피격 애니메이션 재생
-	AnimInst->Montage_Play(HitReactMontage, 1.0f);
+    AnimInst->Montage_Play(HitReactMontage, 1.0f);
 
-	// 일정 시간 후 다시 재생 가능하도록
-	GetWorldTimerManager().ClearTimer(TimerHandle_HitReactInterval);
-	GetWorldTimerManager().SetTimer(
-		TimerHandle_HitReactInterval,
-		this,
-		&AEnemyMecha::ResetHitReactWindow,
-		HitReactInterval,
-		false
-	);
+    GetWorldTimerManager().ClearTimer(TimerHandle_HitReactInterval);
+    GetWorldTimerManager().SetTimer(
+        TimerHandle_HitReactInterval,
+        this,
+        &AEnemyMecha::ResetHitReactWindow,
+        HitReactInterval,
+        false
+    );
 }
 
 void AEnemyMecha::ResetHitReactWindow()
 {
-	bCanPlayHitReact = true;
+    bCanPlayHitReact = true;
 }
 
 // ========================================
@@ -414,147 +405,154 @@ void AEnemyMecha::ResetHitReactWindow()
 // 미사일 능력 발동
 void AEnemyMecha::FireMissileAbility()
 {
-	if (!AbilitySystem || !MissileAbilityClass_Enemy)
-		return;
+    if (!AbilitySystem || !MissileAbilityClass_Enemy)
+        return;
 
-	AbilitySystem->TryActivateAbilityByClass(MissileAbilityClass_Enemy);
+    AbilitySystem->TryActivateAbilityByClass(MissileAbilityClass_Enemy);
 }
 
 // 미사일 직접 발사 (애님 노티파이에서 호출)
 void AEnemyMecha::FireMissileFromNotify()
 {
-	if (!MissileClass_Enemy || !CurrentTarget)
-	{
-		return;
-	}
+    if (!MissileClass_Enemy || !CurrentTarget)
+    {
+        return;
+    }
 
-	USkeletalMeshComponent* SkeletalMeshComp = GetMesh();
-	if (!SkeletalMeshComp)
-	{
-		return;
-	}
+    USkeletalMeshComponent* SkeletalMeshComp = GetMesh();
+    if (!SkeletalMeshComp)
+    {
+        return;
+    }
 
-	FVector SpawnLocation;
-	FRotator SpawnRotation;
+    FVector SpawnLocation;
+    FRotator SpawnRotation;
 
-	// ========== 발사 위치 및 방향 계산 ==========
-	if (SkeletalMeshComp->DoesSocketExist(FireSocketName))
-	{
-		// 소켓이 있으면 소켓 위치에서
-		SpawnLocation = SkeletalMeshComp->GetSocketLocation(FireSocketName);
-		const FVector ToTarget = CurrentTarget->GetActorLocation() - SpawnLocation;
-		SpawnRotation = ToTarget.Rotation();
-	}
-	else
-	{
-		// 소켓이 없으면 앞쪽에서
-		SpawnLocation = GetActorLocation() + GetActorForwardVector() * FallbackSpawnOffset;
-		SpawnRotation = GetActorRotation();
-	}
+    if (SkeletalMeshComp->DoesSocketExist(FireSocketName))
+    {
+        SpawnLocation = SkeletalMeshComp->GetSocketLocation(FireSocketName);
+        const FVector ToTarget = CurrentTarget->GetActorLocation() - SpawnLocation;
+        SpawnRotation = ToTarget.Rotation();
+    }
+    else
+    {
+        SpawnLocation = GetActorLocation() + GetActorForwardVector() * FallbackSpawnOffset;
+        SpawnRotation = GetActorRotation();
+    }
 
-	UWorld* World = GetWorld();
-	if (!World)
-	{
-		return;
-	}
+    UWorld* World = GetWorld();
+    if (!World)
+    {
+        return;
+    }
 
-	// ========== 미사일 스폰 ==========
-	FActorSpawnParameters SpawnParams;
-	SpawnParams.Owner = this;
-	SpawnParams.Instigator = this;
+    FActorSpawnParameters SpawnParams;
+    SpawnParams.Owner = this;
+    SpawnParams.Instigator = this;
 
-	AActor* Missile = World->SpawnActor<AActor>(
-		MissileClass_Enemy,
-		SpawnLocation,
-		SpawnRotation,
-		SpawnParams
-	);
+    AActor* Missile = World->SpawnActor<AActor>(
+        MissileClass_Enemy,
+        SpawnLocation,
+        SpawnRotation,
+        SpawnParams
+    );
 
-	// ========== 유도 미사일 설정 ==========
-	if (Missile)
-	{
-		if (UProjectileMovementComponent* MoveComp =
-			Missile->FindComponentByClass<UProjectileMovementComponent>())
-		{
-			MoveComp->bIsHomingProjectile = true;
+    if (Missile)
+    {
+        if (UProjectileMovementComponent* MoveComp =
+            Missile->FindComponentByClass<UProjectileMovementComponent>())
+        {
+            MoveComp->bIsHomingProjectile = true;
 
-			if (CurrentTarget->GetRootComponent())
-			{
-				MoveComp->HomingTargetComponent = CurrentTarget->GetRootComponent();
-			}
+            if (CurrentTarget->GetRootComponent())
+            {
+                MoveComp->HomingTargetComponent = CurrentTarget->GetRootComponent();
+            }
 
-			MoveComp->Velocity = SpawnRotation.Vector() * MoveComp->InitialSpeed;
-		}
-	}
+            MoveComp->Velocity = SpawnRotation.Vector() * MoveComp->InitialSpeed;
+        }
+    }
 }
 
 // 대시 능력 발동
 void AEnemyMecha::FireDashAbility()
 {
-	if (!AbilitySystem || !DashAbilityClass_Enemy)
-		return;
+    if (!AbilitySystem || !DashAbilityClass_Enemy)
+        return;
 
-	AbilitySystem->TryActivateAbilityByClass(DashAbilityClass_Enemy);
+    AbilitySystem->TryActivateAbilityByClass(DashAbilityClass_Enemy);
 }
 
 // 호버 능력 발동
 void AEnemyMecha::FireHoverAbility()
 {
-	if (!AbilitySystem || !HoverAbilityClass_Enemy) 
-		return;
+    if (!AbilitySystem || !HoverAbilityClass_Enemy)
+        return;
 
-	AbilitySystem->TryActivateAbilityByClass(HoverAbilityClass_Enemy);
+    AbilitySystem->TryActivateAbilityByClass(HoverAbilityClass_Enemy);
+}
+
+// Boss 미사일 레인 패턴 Ability 발동
+void AEnemyMecha::FireBossMissileRainAbility()
+{
+    if (!AbilitySystem || !BossMissileRainAbilityClass)
+    {
+        return;
+    }
+
+    // 이미 죽은 상태면 패턴 발동하지 않음
+    if (AbilitySystem->HasMatchingGameplayTag(
+        FGameplayTag::RequestGameplayTag(TEXT("State.Dead"))))
+    {
+        return;
+    }
+
+    AbilitySystem->TryActivateAbilityByClass(BossMissileRainAbilityClass);
 }
 
 // ========================================
 // Hover Particle 제어
 // ========================================
 
-// 호버 파티클 활성화
 void AEnemyMecha::ActivateHoverParticles()
 {
-	for (UParticleSystemComponent* ParticleComp : HoverParticleComponents)
-	{
-		if (ParticleComp && !ParticleComp->IsActive())
-		{
-			ParticleComp->Activate(true);
-		}
-	}
+    for (UParticleSystemComponent* ParticleComp : HoverParticleComponents)
+    {
+        if (ParticleComp && !ParticleComp->IsActive())
+        {
+            ParticleComp->Activate(true);
+        }
+    }
 }
 
-// 호버 파티클 비활성화
 void AEnemyMecha::DeactivateHoverParticles()
 {
-	for (UParticleSystemComponent* ParticleComp : HoverParticleComponents)
-	{
-		if (ParticleComp && ParticleComp->IsActive())
-		{
-			ParticleComp->Deactivate();
-		}
-	}
+    for (UParticleSystemComponent* ParticleComp : HoverParticleComponents)
+    {
+        if (ParticleComp && ParticleComp->IsActive())
+        {
+            ParticleComp->Deactivate();
+        }
+    }
 }
 
-// 호버 파티클 스케일 변경
 void AEnemyMecha::SetHoverParticleScale(FVector NewScale)
 {
-	HoverParticleScale = NewScale;
+    HoverParticleScale = NewScale;
 
-	// 이미 생성된 파티클 컴포넌트들의 스케일도 업데이트
-	for (UParticleSystemComponent* ParticleComp : HoverParticleComponents)
-	{
-		if (ParticleComp)
-		{
-			ParticleComp->SetRelativeScale3D(NewScale);
-		}
-	}
+    for (UParticleSystemComponent* ParticleComp : HoverParticleComponents)
+    {
+        if (ParticleComp)
+        {
+            ParticleComp->SetRelativeScale3D(NewScale);
+        }
+    }
 }
 
-// 호버 파티클 회전 변경
 void AEnemyMecha::SetHoverParticleRotation(FRotator NewRotation)
 {
     HoverParticleRotation = NewRotation;
 
-    // 이미 생성된 파티클 컴포넌트들의 회전도 업데이트
     for (UParticleSystemComponent* ParticleComp : HoverParticleComponents)
     {
         if (ParticleComp)
@@ -574,21 +572,16 @@ void AEnemyMecha::CreateBossHealthWidget()
         return;
     }
 
-    // 플레이어 컨트롤러 찾기
     APlayerController* PC = UGameplayStatics::GetPlayerController(GetWorld(), 0);
     if (!PC)
     {
         return;
     }
 
-    // 위젯 생성
     BossHealthWidget = CreateWidget<UBossHealthWidget>(PC, BossHealthWidgetClass);
     if (BossHealthWidget)
     {
-        // 뷰포트에 추가 (ZOrder를 높게 설정하여 다른 UI 위에 표시)
         BossHealthWidget->AddToViewport(100);
-
-        // ASC와 AttributeSet으로 초기화
         BossHealthWidget->InitWithBoss(AbilitySystem, AttributeSet, BossName);
         BossHealthWidget->ShowBossHealth();
     }
@@ -616,11 +609,8 @@ void AEnemyMecha::StartDeathSlowMotion()
         return;
     }
 
-    // 전역 시간 배율 설정 (슬로우 모션)
     UGameplayStatics::SetGlobalTimeDilation(World, DeathSlowMotionScale);
 
-    // 실제 시간 기준으로 타이머 설정 (슬로우 모션 영향 안 받음)
-    // TimerRate = Duration * Scale (슬로우 상태에서의 실제 경과 시간)
     const float RealTimeDuration = DeathSlowMotionDuration * DeathSlowMotionScale;
 
     World->GetTimerManager().SetTimer(
@@ -643,24 +633,17 @@ void AEnemyMecha::RestoreNormalTime()
         return;
     }
 
-    // 전역 시간 배율을 1.0 (정상)으로 복원
     UGameplayStatics::SetGlobalTimeDilation(World, 1.0f);
 
-    // 보스 사망 시 게임 종료 위젯 표시
     if (bIsBoss && GameCompleteWidgetClass)
     {
-        // 플레이어 컨트롤러 찾기
         APlayerController* PC = UGameplayStatics::GetPlayerController(World, 0);
         if (PC && !GameCompleteWidget)
         {
-            // 위젯 생성
             GameCompleteWidget = CreateWidget<UWBP_GameComplete>(PC, GameCompleteWidgetClass);
             if (GameCompleteWidget)
             {
-                // 뷰포트에 추가 (ZOrder를 높게 설정하여 다른 UI 위에 표시)
                 GameCompleteWidget->AddToViewport(200);
-                
-                // 게임 종료 화면 표시 (페이드 인 효과)
                 GameCompleteWidget->ShowGameComplete(2.0f);
             }
         }
@@ -672,23 +655,18 @@ void AEnemyMecha::RestoreNormalTime()
 // ========================================
 void AEnemyMecha::OnDeathMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
-    // Death Montage가 종료되면
     if (Montage == DeathMontage)
     {
-        // 델리게이트 해제
         if (UAnimInstance* AnimInst = GetMesh()->GetAnimInstance())
         {
             AnimInst->OnMontageBlendingOut.RemoveDynamic(this, &AEnemyMecha::OnDeathMontageEnded);
         }
 
-        // 애니메이션 일시정지 - 마지막 포즈(죽은 포즈) 유지
-        // Idle로 돌아가지 않음
         if (GetMesh())
         {
             GetMesh()->bPauseAnims = true;
         }
 
-        // 즉시 제거
         Destroy();
     }
 }
@@ -702,12 +680,10 @@ void AEnemyMecha::ResetBlackboardCombatState()
     {
         if (UBlackboardComponent* BB = AICon->GetBlackboardComponent())
         {
-            // 전투 상태 플래그 초기화
             BB->SetValueAsBool(TEXT("IsAttacking"), false);
             BB->SetValueAsBool(TEXT("IsDashing"), false);
             BB->SetValueAsBool(TEXT("ShouldDash"), false);
-            
-            // 범위 플래그 초기화 (Service가 다시 업데이트할 것)
+
             BB->SetValueAsBool(TEXT("InHookRange"), false);
             BB->SetValueAsBool(TEXT("InUppercutRange"), false);
             BB->SetValueAsBool(TEXT("InFireRange"), false);
