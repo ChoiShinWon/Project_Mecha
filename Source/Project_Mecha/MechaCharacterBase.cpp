@@ -375,10 +375,14 @@ void AMechaCharacterBase::Input_JumpStop(const FInputActionValue&)
 
 void AMechaCharacterBase::Input_SprintStart(const FInputActionValue&)
 {
-    // QuickBoost 어빌리티 눌림
-    if (AbilitySystem)
-        AbilitySystem->AbilityLocalInputPressed((int32)EMechaAbilityInputID::QuickBoost);
+    if (!AbilitySystem) return;
+
+    FGameplayTagContainer QuickBoostTags;
+    QuickBoostTags.AddTag(FGameplayTag::RequestGameplayTag(TEXT("Ability.QuickBoost")));
+
+    AbilitySystem->TryActivateAbilitiesByTag(QuickBoostTags);
 }
+
 
 void AMechaCharacterBase::Input_SprintStop(const FInputActionValue&)
 {
@@ -419,8 +423,9 @@ void AMechaCharacterBase::SetupPlayerInputComponent(UInputComponent* PlayerInput
         // ========== 스프린트 ==========
         if (IA_Sprint)
         {
-            EIC->BindAction(IA_Sprint, ETriggerEvent::Started, this, &AMechaCharacterBase::Input_SprintStart);
-            EIC->BindAction(IA_Sprint, ETriggerEvent::Completed, this, &AMechaCharacterBase::Input_SprintStop);
+            // 누를 때만 발동 시도 (Triggered or Started, 둘 다 가능)
+            EIC->BindAction(IA_Sprint, ETriggerEvent::Triggered, this, &AMechaCharacterBase::Input_SprintStart);
+            // QuickBoost는 “홀드 유지” 개념이 아니라 순간 발동이니까 Released는 굳이 필요 없음
         }
 
         // ========== 호버 ==========
