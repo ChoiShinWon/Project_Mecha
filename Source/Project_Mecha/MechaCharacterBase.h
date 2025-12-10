@@ -68,7 +68,6 @@ public:
     virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 protected:
-   
 
     // ---- Components ----
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
@@ -109,7 +108,7 @@ protected:
     UPROPERTY(EditDefaultsOnly, Category = "Input") UInputAction* IA_GunFire;
     UPROPERTY(EditDefaultsOnly, Category = "Input") UInputAction* IA_Reload;
 
-    //  락온 입력 액션 (마우스 휠 버튼)
+    // 락온 입력 액션 (마우스 휠 버튼)
     UPROPERTY(EditDefaultsOnly, Category = "Input") UInputAction* IA_LockOn;
 
     // AbilitySystemComponent 별칭
@@ -127,7 +126,7 @@ protected:
     UFUNCTION() void Input_GunFire_Released();
     UFUNCTION() void Input_Reload_Pressed();
 
-    //  락온 토글 입력
+    // 락온 토글 입력
     UFUNCTION() void Input_LockOnToggle(const FInputActionValue& Value);
 
 public:
@@ -161,7 +160,7 @@ public:
     UFUNCTION(BlueprintCallable, Category = "HitReact")
     void PlayHitReactFromDirection(const FVector& AttackWorldLocation);
 
-    // === Death 몽타주주 ===
+    // === Death 몽타주 ===
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Death|Montage")
     UAnimMontage* DeathMontage;
 
@@ -180,6 +179,11 @@ public:
     // === Overheat 상태 확인용 ===
     UFUNCTION(BlueprintPure, Category = "GAS|Energy")
     bool IsOverheated() const;
+
+    // ===== QuickBoost 카메라 쉬프트 컨트롤 =====
+    // DirectionSign: +1 (오른쪽 퀵부스트), -1 (왼쪽 퀵부스트)
+    void StartQuickBoostCameraShift(float DirectionSign);
+    void EndQuickBoostCameraShift();
 
 protected:
 
@@ -288,7 +292,21 @@ private:
     void Input_SprintStop(const FInputActionValue& Value);
     void Input_BoostMode_Pressed(const FInputActionValue& Value);
 
-    //  Lock-On 상태
+    // ===== QuickBoost 카메라와 방향 판정을 위한 입력 캐시 =====
+    // Move Right 축 최신 값 (왼쪽 -1 ~ 오른쪽 +1)
+    float CachedMoveRight = 0.f;
+
+    // 카메라 사이드 오프셋 튜닝
+    UPROPERTY(EditAnywhere, Category = "Camera|QuickBoost")
+    float CameraSideOffsetAmount = 120.f;
+
+    UPROPERTY(EditAnywhere, Category = "Camera|QuickBoost")
+    float CameraSideOffsetInterpSpeed = 8.f;
+
+    float CurrentCameraSideOffset = 0.f;
+    float TargetCameraSideOffset = 0.f;
+
+    // 락온 상태
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LockOn", meta = (AllowPrivateAccess = "true"))
     bool bIsLockedOn = false;
 

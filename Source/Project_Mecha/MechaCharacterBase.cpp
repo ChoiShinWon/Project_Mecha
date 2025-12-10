@@ -37,17 +37,18 @@ AMechaCharacterBase::AMechaCharacterBase()
 {
     PrimaryActorTick.bCanEverTick = true;
 
-    // ========== 카메라 설정 ==========
+    // ========== 카메라 설정 ==========    
     SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
     SpringArm->SetupAttachment(RootComponent);
     SpringArm->TargetArmLength = 300.f;
     SpringArm->bUsePawnControlRotation = true;
+    SpringArm->SocketOffset = FVector::ZeroVector; // 기본은 중앙
 
     FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
     FollowCamera->SetupAttachment(SpringArm, USpringArmComponent::SocketName);
     FollowCamera->bUsePawnControlRotation = false;
 
-    // ========== 이동 설정 ==========
+    // ========== 이동 설정 ==========    
     auto Move = GetCharacterMovement();
     Move->bOrientRotationToMovement = true;  // 이동 방향으로 회전
     Move->RotationRate = FRotator(0.f, 720.f, 0.f);
@@ -59,15 +60,15 @@ AMechaCharacterBase::AMechaCharacterBase()
     bSavedUseControllerRotationYaw = bUseControllerRotationYaw;
     bSavedOrientRotationToMovement = Move->bOrientRotationToMovement;
 
-    // ========== GAS 초기화 ==========
+    // ========== GAS 초기화 ==========    
     AbilitySystem = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystem"));
     AttributeSet = CreateDefaultSubobject<UMechaAttributeSet>(TEXT("AttributeSet"));
 
-    // ========== 총구 위치 컴포넌트 ==========
+    // ========== 총구 위치 컴포넌트 ==========    
     MuzzleLocation = CreateDefaultSubobject<USceneComponent>(TEXT("FireSocket"));
     MuzzleLocation->SetupAttachment(GetMesh(), MuzzleSocketName);
 
-    // ========== Overheat 파티클 컴포넌트 ==========
+    // ========== Overheat 파티클 컴포넌트 ==========    
     OverheatParticleComponent = CreateDefaultSubobject<UParticleSystemComponent>(TEXT("OverheatParticle"));
     OverheatParticleComponent->SetupAttachment(GetMesh());
     OverheatParticleComponent->bAutoActivate = false;  // 기본적으로 비활성화
@@ -114,6 +115,21 @@ void AMechaCharacterBase::Tick(float DeltaSeconds)
     if (bIsLockedOn && CurrentLockOnTarget)
     {
         UpdateLockOnView(DeltaSeconds);
+    }
+
+    // ========== QuickBoost 카메라 사이드 오프셋 보간 ==========
+    CurrentCameraSideOffset = FMath::FInterpTo(
+        CurrentCameraSideOffset,
+        TargetCameraSideOffset,
+        DeltaSeconds,
+        CameraSideOffsetInterpSpeed
+    );
+
+    if (SpringArm)
+    {
+        FVector Offset = SpringArm->SocketOffset;
+        Offset.Y = CurrentCameraSideOffset; // Y축(좌우) 오프셋
+        SpringArm->SocketOffset = Offset;
     }
 }
 
@@ -310,7 +326,6 @@ void AMechaCharacterBase::OnEnergyChanged(const FOnAttributeChangeData& Data)
                 }
 
                 OverheatParticleComponent->Activate(true);
-                
             }
         }
 
@@ -346,6 +361,10 @@ void AMechaCharacterBase::OnEnergyChanged(const FOnAttributeChangeData& Data)
 void AMechaCharacterBase::Input_Move(const FInputActionValue& Value)
 {
     const FVector2D Axis = Value.Get<FVector2D>();
+
+    // QuickBoost 방향 판단을 위해 Right 축 캐시
+    CachedMoveRight = Axis.X;
+
     if (!Controller || Axis.IsNearlyZero()) return;
 
     // 컨트롤러 방향 기준으로 이동
@@ -377,17 +396,38 @@ void AMechaCharacterBase::Input_SprintStart(const FInputActionValue&)
 {
     if (!AbilitySystem) return;
 
+    // ===== 카메라 쉬프트 방향 계산 =====
+    float DirSign = 0.f;
+
+    if (CachedMoveRight > 0.1f)
+        DirSign = +1.f;   // 오른쪽으로 퀵부스트
+    else if (CachedMoveRight < -0.1f)
+        DirSign = -1.f;   // 왼쪽으로 퀵부스트
+
+    if (DirSign != 0.f)
+    {
+        StartQuickBoostCameraShift(DirSign);
+    }
+    else
+    {
+        // 정면/후면 부스트일 땐 카메라는 중앙 유지
+        EndQuickBoostCameraShift();
+    }
+
+    // ===== QuickBoost Ability 발동 =====
     FGameplayTagContainer QuickBoostTags;
     QuickBoostTags.AddTag(FGameplayTag::RequestGameplayTag(TEXT("Ability.QuickBoost")));
 
     AbilitySystem->TryActivateAbilitiesByTag(QuickBoostTags);
 }
 
-
 void AMechaCharacterBase::Input_SprintStop(const FInputActionValue&)
 {
     if (AbilitySystem)
         AbilitySystem->AbilityLocalInputReleased((int32)EMechaAbilityInputID::QuickBoost);
+
+    // 입력에서 손 뗐으면 카메라도 중앙으로 복귀 시도
+    EndQuickBoostCameraShift();
 }
 
 void AMechaCharacterBase::Input_BoostMode_Pressed(const FInputActionValue&)
@@ -420,12 +460,10 @@ void AMechaCharacterBase::SetupPlayerInputComponent(UInputComponent* PlayerInput
             EIC->BindAction(IA_Jump, ETriggerEvent::Canceled, this, &AMechaCharacterBase::Input_JumpStop);
         }
 
-        // ========== 스프린트 ==========
+        // ========== 스프린트(QuickBoost) ==========
         if (IA_Sprint)
         {
-            // 누를 때만 발동 시도 (Triggered or Started, 둘 다 가능)
             EIC->BindAction(IA_Sprint, ETriggerEvent::Triggered, this, &AMechaCharacterBase::Input_SprintStart);
-            // QuickBoost는 “홀드 유지” 개념이 아니라 순간 발동이니까 Released는 굳이 필요 없음
         }
 
         // ========== 호버 ==========
@@ -481,7 +519,6 @@ void AMechaCharacterBase::SetupPlayerInputComponent(UInputComponent* PlayerInput
         }
     }
 }
-
 
 // ========================================
 // 능력 입력 핸들러들
@@ -651,11 +688,11 @@ void AMechaCharacterBase::HandleDeath()
         {
             // Pawn 채널 무시 (Enemy AI 감지 방지)
             SkelMesh->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore);
-            
+
             // 커스텀 채널들 무시 (프로젝타일 등)
             SkelMesh->SetCollisionResponseToChannel(ECC_GameTraceChannel1, ECR_Ignore);
             SkelMesh->SetCollisionResponseToChannel(ECC_GameTraceChannel2, ECR_Ignore);
-            
+
             // Visibility 채널 무시 (AI 시야 감지 방지)
             SkelMesh->SetCollisionResponseToChannel(ECC_Visibility, ECR_Ignore);
         }
@@ -667,7 +704,7 @@ void AMechaCharacterBase::HandleDeath()
         {
             // Pawn 채널 무시 (Enemy AI가 타겟으로 인식 못함)
             Capsule->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore);
-            
+
             // Visibility 무시 (AI 시야에 안 보임)
             Capsule->SetCollisionResponseToChannel(ECC_Visibility, ECR_Ignore);
         }
@@ -693,9 +730,6 @@ void AMechaCharacterBase::HandleDeath()
             {
                 // 몽타주 재생 (BlendOut 시간을 0으로 설정하면 마지막 포즈 유지)
                 AnimInst->Montage_Play(DeathMontage, 1.0f);
-                
-                // 몽타주가 끝나도 마지막 프레임 유지
-                // (BlendOut을 0으로 설정하거나, 애니메이션의 마지막 프레임에 Pose Snapshot 사용)
             }
         }
     }
@@ -892,7 +926,6 @@ void AMechaCharacterBase::PlayHitReactFromDirection(const FVector& AttackWorldLo
         return;
     }
 
-
     if (!HitReactMontage || !GetMesh())
     {
         return;
@@ -956,4 +989,20 @@ void AMechaCharacterBase::PlayHitReactFromDirection(const FVector& AttackWorldLo
         // 해당 방향 섹션으로 점프
         Anim->Montage_JumpToSection(SectionName, HitReactMontage);
     }
+}
+
+// ========================================
+// QuickBoost 카메라 쉬프트
+// ========================================
+void AMechaCharacterBase::StartQuickBoostCameraShift(float DirectionSign)
+{
+    // DirectionSign: +1 (오른쪽 퀵부스트), -1 (왼쪽 퀵부스트)
+    // 카메라는 반대 방향으로 이동
+    TargetCameraSideOffset = -DirectionSign * CameraSideOffsetAmount;
+}
+
+void AMechaCharacterBase::EndQuickBoostCameraShift()
+{
+    // 카메라를 다시 중앙으로
+    TargetCameraSideOffset = 0.f;
 }
