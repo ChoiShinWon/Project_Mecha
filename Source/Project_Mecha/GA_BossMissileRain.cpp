@@ -1,4 +1,4 @@
-// GA_BossMissileRain.cpp
+ï»¿// GA_BossMissileRain.cpp
 
 #include "GA_BossMissileRain.h"
 
@@ -12,16 +12,19 @@
 #include "AIController.h"
 #include "BehaviorTree/BlackboardComponent.h"
 #include "EnemyMecha.h"
+#include "AbilitySystemInterface.h"
+#include "AbilitySystemComponent.h"
+#include "GameplayTagContainer.h"
 #include "Animation/AnimInstance.h"
 
 UGA_BossMissileRain::UGA_BossMissileRain()
 {
     InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
 
-    // ±âº»°ª ¼¼ÆÃ
+    // ê¸°ë³¸ê°’ ì„¸íŒ…
     HoverDuration = 7.0f;
-    ShotsPerSide = 5;     // ÁÂ 5¹ß, ¿ì 5¹ß
-    FireInterval = 0.7f;  // 0.7ÃÊ¸¶´Ù ÇÑ ½Ö ¹ß»ç
+    ShotsPerSide = 5;     // ì¢Œ 5ë°œ, ìš° 5ë°œ
+    FireInterval = 0.7f;  // 0.7ì´ˆë§ˆë‹¤ í•œ ìŒ ë°œì‚¬
     LeftMuzzleSocketName = TEXT("Muzzle01");
     RightMuzzleSocketName = TEXT("Muzzle02");
 }
@@ -46,10 +49,24 @@ void UGA_BossMissileRain::ActivateAbility(
         return;
     }
 
-    // 1) º¸½º¸¦ °øÁßÀ¸·Î ¶ç¿ì°í, ¸ùÅ¸ÁÖ Àç»ı
+    // ìŠˆí¼ ì•„ë¨¸ íƒœê·¸ ë¶€ì—¬ (í”¼ê²© HitReact/Montage ì•ˆ ëŠê¸°ë„ë¡)
+    {
+        AActor* AvatarActor = ActorInfo->AvatarActor.Get();
+        if (IAbilitySystemInterface* ASI = Cast<IAbilitySystemInterface>(AvatarActor))
+        {
+            if (UAbilitySystemComponent* ASC = ASI->GetAbilitySystemComponent())
+            {
+                ASC->AddLooseGameplayTag(
+                    FGameplayTag::RequestGameplayTag(TEXT("State.SuperArmor"))
+                );
+            }
+        }
+    }
+
+    // 1) ë³´ìŠ¤ë¥¼ ê³µì¤‘ìœ¼ë¡œ ë„ìš°ê³ , ëª½íƒ€ì£¼ ì¬ìƒ
     StartHover(ActorInfo);
 
-    // 1-1) Blackboard¿¡ "IsUsingMissileRain" = true ¼¼ÆÃ
+    // 1-1) Blackboardì— "IsUsingMissileRain" = true ì„¸íŒ…
     if (AEnemyMecha* BossChar = Cast<AEnemyMecha>(ActorInfo->AvatarActor.Get()))
     {
         if (AAIController* AICon = Cast<AAIController>(BossChar->GetController()))
@@ -61,7 +78,7 @@ void UGA_BossMissileRain::ActivateAbility(
         }
     }
 
-    // 2) ³»ºÎ Ä«¿îÅÍ ÃÊ±âÈ­
+    // 2) ë‚´ë¶€ ì¹´ìš´í„° ì´ˆê¸°í™”
     ShotsFiredPairs = 0;
 
     UWorld* World = GetWorld();
@@ -71,25 +88,26 @@ void UGA_BossMissileRain::ActivateAbility(
         return;
     }
 
-    // 3) ¹Ì»çÀÏ ¹ß»ç Å¸ÀÌ¸Ó ½ÃÀÛ (½Ö ¹ß»ç)
+    // 3) ë¯¸ì‚¬ì¼ ë°œì‚¬ íƒ€ì´ë¨¸ ì‹œì‘ (ìŒ ë°œì‚¬)
     World->GetTimerManager().SetTimer(
         FireTimerHandle,
         this,
         &UGA_BossMissileRain::SpawnMissilePair,
         FireInterval,
-        true,   // looping
-        0.0f    // Ã¹ ¹ß»ç µô·¹ÀÌ
+        true,
+        0.0f
     );
 
-    // 4) 7ÃÊ ÈÄ ÆĞÅÏ Á¾·á
+    // 4) 7ì´ˆ í›„ íŒ¨í„´ ì¢…ë£Œ
     World->GetTimerManager().SetTimer(
         EndTimerHandle,
         this,
         &UGA_BossMissileRain::OnMissileRainFinished,
         HoverDuration,
-        false   // ÇÑ ¹ø¸¸
+        false
     );
 }
+
 
 void UGA_BossMissileRain::EndAbility(
     const FGameplayAbilitySpecHandle Handle,
@@ -105,14 +123,22 @@ void UGA_BossMissileRain::EndAbility(
         World->GetTimerManager().ClearTimer(EndTimerHandle);
     }
 
-    // È£¹ö/¾Ö´Ï »óÅÂ ¿øº¹
+    // í˜¸ë²„/ì• ë‹ˆ ìƒíƒœ ì›ë³µ
     EndHover(ActorInfo);
 
-    // 2-1) Blackboard¿¡ "IsUsingMissileRain" = false ¼¼ÆÃ
     if (ActorInfo && ActorInfo->AvatarActor.IsValid())
     {
         if (AEnemyMecha* BossChar = Cast<AEnemyMecha>(ActorInfo->AvatarActor.Get()))
         {
+            //  1) SuperArmor íƒœê·¸ í•´ì œ
+            if (UAbilitySystemComponent* ASC = BossChar->GetAbilitySystemComponent())
+            {
+                ASC->RemoveLooseGameplayTag(
+                    FGameplayTag::RequestGameplayTag(TEXT("State.SuperArmor"))
+                );
+            }
+
+            // ğŸ”¹ 2) Blackboardì— "IsUsingMissileRain" = false ì„¸íŒ…
             if (AAIController* AICon = Cast<AAIController>(BossChar->GetController()))
             {
                 if (UBlackboardComponent* BB = AICon->GetBlackboardComponent())
@@ -139,17 +165,17 @@ void UGA_BossMissileRain::StartHover(const FGameplayAbilityActorInfo* ActorInfo)
         return;
     }
 
-    // ÀÌµ¿ ¸ğµå Flying + Áß·Â Á¦°Å
+    // ì´ë™ ëª¨ë“œ Flying + ì¤‘ë ¥ ì œê±°
     if (UCharacterMovementComponent* MoveComp = BossChar->GetCharacterMovement())
     {
         MoveComp->SetMovementMode(MOVE_Flying);
         MoveComp->GravityScale = 0.0f;
     }
 
-    // »ìÂ¦ À§·Î ¶ç¿öÁÖ±â (¼±ÅÃ)
+    // ì‚´ì§ ìœ„ë¡œ ë„ì›Œì£¼ê¸° (ì„ íƒ)
     BossChar->LaunchCharacter(FVector(0.f, 0.f, 300.f), false, true);
 
-    // ¸ùÅ¸ÁÖ Àç»ı
+    // ëª½íƒ€ì£¼ ì¬ìƒ
     if (FireMontage)
     {
         if (USkeletalMeshComponent* Mesh = BossChar->GetMesh())
@@ -177,12 +203,12 @@ void UGA_BossMissileRain::EndHover(const FGameplayAbilityActorInfo* ActorInfo)
 
     if (UCharacterMovementComponent* MoveComp = BossChar->GetCharacterMovement())
     {
-        // º¸½º ±âº» ÀÌµ¿ ¸ğµå·Î µÇµ¹¸®±â (ÀÏ¹İÀûÀ¸·Î Walking)
+        // ë³´ìŠ¤ ê¸°ë³¸ ì´ë™ ëª¨ë“œë¡œ ë˜ëŒë¦¬ê¸° (ì¼ë°˜ì ìœ¼ë¡œ Walking)
         MoveComp->SetMovementMode(MOVE_Walking);
         MoveComp->GravityScale = 1.0f;
     }
 
-    // ¸ùÅ¸ÁÖ Á¤¸® (¿øÇÏ¸é)
+    // ëª½íƒ€ì£¼ ì •ë¦¬ (ì›í•˜ë©´)
     if (FireMontage)
     {
         if (USkeletalMeshComponent* Mesh = BossChar->GetMesh())
@@ -197,7 +223,7 @@ void UGA_BossMissileRain::EndHover(const FGameplayAbilityActorInfo* ActorInfo)
 
 void UGA_BossMissileRain::SpawnMissilePair()
 {
-    // ½÷¾ß ÇÒ ¸¸Å­ ´Ù ½úÀ¸¸é Å¸ÀÌ¸Ó Á¤Áö
+    // ì´ì•¼ í•  ë§Œí¼ ë‹¤ ìˆìœ¼ë©´ íƒ€ì´ë¨¸ ì •ì§€
     if (ShotsFiredPairs >= ShotsPerSide)
     {
         if (UWorld* World = GetWorld())
@@ -225,7 +251,7 @@ void UGA_BossMissileRain::SpawnMissilePair()
         return;
     }
 
-    // Å¸°Ù: ÇÃ·¹ÀÌ¾î (0¹ø ÇÃ·¹ÀÌ¾î ±âÁØ)
+    // íƒ€ê²Ÿ: í”Œë ˆì´ì–´ (0ë²ˆ í”Œë ˆì´ì–´ ê¸°ì¤€)
     APawn* PlayerPawn = UGameplayStatics::GetPlayerPawn(World, 0);
     const bool bHasTarget = IsValid(PlayerPawn);
 
@@ -235,17 +261,17 @@ void UGA_BossMissileRain::SpawnMissilePair()
         return;
     }
 
-    // 1) ¿ŞÂÊ ¼ÒÄÏ À§Ä¡/È¸Àü
+    // 1) ì™¼ìª½ ì†Œì¼“ ìœ„ì¹˜/íšŒì „
     const FTransform LeftMuzzleTransform = Mesh->GetSocketTransform(LeftMuzzleSocketName, RTS_World);
     FVector LeftLoc = LeftMuzzleTransform.GetLocation();
     FRotator LeftRot = LeftMuzzleTransform.Rotator();
 
-    // 2) ¿À¸¥ÂÊ ¼ÒÄÏ À§Ä¡/È¸Àü
+    // 2) ì˜¤ë¥¸ìª½ ì†Œì¼“ ìœ„ì¹˜/íšŒì „
     const FTransform RightMuzzleTransform = Mesh->GetSocketTransform(RightMuzzleSocketName, RTS_World);
     FVector RightLoc = RightMuzzleTransform.GetLocation();
     FRotator RightRot = RightMuzzleTransform.Rotator();
 
-    // Å¸°ÙÀÌ ÀÖÀ¸¸é Å¸°ÙÀ» ÇâÇÏµµ·Ï È¸Àü º¸Á¤
+    // íƒ€ê²Ÿì´ ìˆìœ¼ë©´ íƒ€ê²Ÿì„ í–¥í•˜ë„ë¡ íšŒì „ ë³´ì •
     if (bHasTarget)
     {
         const FVector TargetLoc = PlayerPawn->GetActorLocation();
@@ -253,7 +279,7 @@ void UGA_BossMissileRain::SpawnMissilePair()
         LeftRot = UKismetMathLibrary::FindLookAtRotation(LeftLoc, TargetLoc);
         RightRot = UKismetMathLibrary::FindLookAtRotation(RightLoc, TargetLoc);
 
-        // 100% ¸íÁß ¹æÁö¿ë ·£´ı ¿ÀÇÁ¼Â (Á¶±İ¸¸ °Çµå¸²)
+        // 100% ëª…ì¤‘ ë°©ì§€ìš© ëœë¤ ì˜¤í”„ì…‹ (ì¡°ê¸ˆë§Œ ê±´ë“œë¦¼)
         const float RandYawOffsetL = FMath::RandRange(-5.0f, 5.0f);
         const float RandPitchOffsetL = FMath::RandRange(-3.0f, 3.0f);
         LeftRot.Yaw += RandYawOffsetL;
@@ -269,7 +295,7 @@ void UGA_BossMissileRain::SpawnMissilePair()
     SpawnParams.Owner = BossChar;
     SpawnParams.Instigator = BossChar;
 
-    // ¿ŞÂÊ ¹Ì»çÀÏ
+    // ì™¼ìª½ ë¯¸ì‚¬ì¼
     World->SpawnActor<AActor>(
         MissileClass,
         LeftLoc,
@@ -277,7 +303,7 @@ void UGA_BossMissileRain::SpawnMissilePair()
         SpawnParams
     );
 
-    // ¿À¸¥ÂÊ ¹Ì»çÀÏ
+    // ì˜¤ë¥¸ìª½ ë¯¸ì‚¬ì¼
     World->SpawnActor<AActor>(
         MissileClass,
         RightLoc,
@@ -285,12 +311,12 @@ void UGA_BossMissileRain::SpawnMissilePair()
         SpawnParams
     );
 
-    // ÇÑ ½Ö ¹ß»ç ¿Ï·á
+    // í•œ ìŒ ë°œì‚¬ ì™„ë£Œ
     ++ShotsFiredPairs;
 }
 
 void UGA_BossMissileRain::OnMissileRainFinished()
 {
-    // 7ÃÊ ³¡³µÀ¸´Ï ´É·Â Á¾·á
+    // 7ì´ˆ ëë‚¬ìœ¼ë‹ˆ ëŠ¥ë ¥ ì¢…ë£Œ
     EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 }

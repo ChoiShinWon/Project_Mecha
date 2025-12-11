@@ -367,7 +367,23 @@ void AEnemyMecha::OnHealthChanged(const FOnAttributeChangeData& Data)
 // ========================================
 void AEnemyMecha::PlayHitReact()
 {
-    if (bIsDead || !HitReactMontage || !bCanPlayHitReact)
+    // 1) 이미 죽었으면 X
+    if (bIsDead)
+    {
+        return;
+    }
+
+    // 2) 🔹 SuperArmor 중이면 HitReact 자체를 막기
+    if (AbilitySystem &&
+        AbilitySystem->HasMatchingGameplayTag(
+            FGameplayTag::RequestGameplayTag(TEXT("State.SuperArmor"))
+        ))
+    {
+        return;
+    }
+
+    // 3) 몽타주 없거나 쿨다운 중이면 X
+    if (!HitReactMontage || !bCanPlayHitReact)
     {
         return;
     }
@@ -392,6 +408,7 @@ void AEnemyMecha::PlayHitReact()
         false
     );
 }
+
 
 void AEnemyMecha::ResetHitReactWindow()
 {
