@@ -396,6 +396,11 @@ void AMechaCharacterBase::Input_SprintStart(const FInputActionValue&)
 {
     if (!AbilitySystem) return;
 
+    if (IsOverheated())
+    {
+        return;
+    }
+
     // ===== 카메라 쉬프트 방향 계산 =====
     float DirSign = 0.f;
 
@@ -417,7 +422,6 @@ void AMechaCharacterBase::Input_SprintStart(const FInputActionValue&)
     // ===== QuickBoost Ability 발동 =====
     FGameplayTagContainer QuickBoostTags;
     QuickBoostTags.AddTag(FGameplayTag::RequestGameplayTag(TEXT("Ability.QuickBoost")));
-
     AbilitySystem->TryActivateAbilitiesByTag(QuickBoostTags);
 }
 
