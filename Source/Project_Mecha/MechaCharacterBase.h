@@ -180,6 +180,10 @@ public:
     UFUNCTION(BlueprintPure, Category = "GAS|Energy")
     bool IsOverheated() const;
 
+    // === Reloading 상태 확인용 ===
+    UFUNCTION(BlueprintPure, Category = "GAS|State")
+    bool IsReloading() const;
+
     // ===== QuickBoost 카메라 쉬프트 컨트롤 =====
     // DirectionSign: +1 (오른쪽 퀵부스트), -1 (왼쪽 퀵부스트)
     void StartQuickBoostCameraShift(float DirectionSign);
@@ -261,6 +265,7 @@ private:
     FGameplayTag Tag_Boosting;
     FGameplayTag Tag_Overheated;
     FGameplayTag Tag_StateHovering;
+    FGameplayTag Tag_Reloading;
 
     // QuickBoost 튜닝
     UPROPERTY(EditDefaultsOnly, Category = "QuickBoost")

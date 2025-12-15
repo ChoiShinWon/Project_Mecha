@@ -248,6 +248,7 @@ void AMechaCharacterBase::InitASCOnce()
     Tag_Overheated = FGameplayTag::RequestGameplayTag(TEXT("State.Overheated"));
     Tag_StateHovering = FGameplayTag::RequestGameplayTag(TEXT("State.Hovering"));
     Tag_Attacking = FGameplayTag::RequestGameplayTag(TEXT("State.Attacking"));
+    Tag_Reloading = FGameplayTag::RequestGameplayTag(TEXT("State.Reloading"));
 
     // ========== 기본 소유 태그 적용 ==========
     if (DefaultOwnedTags.Num() > 0)
@@ -397,6 +398,11 @@ void AMechaCharacterBase::Input_SprintStart(const FInputActionValue&)
     if (!AbilitySystem) return;
 
     if (IsOverheated())
+    {
+        return;
+    }
+
+    if (IsReloading())
     {
         return;
     }
@@ -652,6 +658,11 @@ float AMechaCharacterBase::GetMaxHealth() const
 bool AMechaCharacterBase::IsOverheated() const
 {
     return (AbilitySystem && AbilitySystem->HasMatchingGameplayTag(Tag_Overheated));
+}
+
+bool AMechaCharacterBase::IsReloading() const
+{
+    return (AbilitySystem && AbilitySystem->HasMatchingGameplayTag(Tag_Reloading));
 }
 
 // ========================================
