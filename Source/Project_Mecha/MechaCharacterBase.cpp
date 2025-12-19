@@ -659,7 +659,7 @@ bool AMechaCharacterBase::IsOverheated() const
 {
     return (AbilitySystem && AbilitySystem->HasMatchingGameplayTag(Tag_Overheated));
 }
-
+// === Reload 상태 확인 ===
 bool AMechaCharacterBase::IsReloading() const
 {
     return (AbilitySystem && AbilitySystem->HasMatchingGameplayTag(Tag_Reloading));
