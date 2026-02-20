@@ -73,7 +73,16 @@ Plugins/**/Intermediate/*
 # Cache files for the editor to use
 DerivedDataCache/*
 
+# ===================================================
+#  Content 폴더 예외 처리 
+# ===================================================
 /Content/*
 !/Content/
 !/Content/Main/
 !/Content/Main/**
+
+# UE5 OFPA (레벨에 배치된 액터 데이터) 허용
+!/Content/__ExternalActors__/
+!/Content/__ExternalActors__/**
+!/Content/__ExternalObjects__/
+!/Content/__ExternalObjects__/**
