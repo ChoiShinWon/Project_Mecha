@@ -159,25 +159,31 @@ void UGA_MissleFire::SpawnMissle(int32 Index, ACharacter* OwnerChar)
 	Missle->SetActorTickEnabled(true);
 
 	// ========== 충돌 무시 설정 (캐릭터와 충돌 방지) ==========
+	// if (UPrimitiveComponent* MissilePrim = Cast<UPrimitiveComponent>(Missle->GetRootComponent()))
+	// {
+	// 	// 미사일이 오너를 무시
+	// 	MissilePrim->IgnoreActorWhenMoving(OwnerChar, true);
+	// 	MissilePrim->MoveIgnoreActors.AddUnique(OwnerChar);
+	// 	
+	// 	// 오너의 모든 컴포넌트와 상호 무시 (양방향)
+	// 	TArray<UPrimitiveComponent*> OwnerPrims;
+	// 	OwnerChar->GetComponents<UPrimitiveComponent>(OwnerPrims);
+	// 	for (UPrimitiveComponent* OwnerPrim : OwnerPrims)
+	// 	{
+	// 		if (OwnerPrim)
+	// 		{
+	// 			MissilePrim->IgnoreComponentWhenMoving(OwnerPrim, true);
+	// 			OwnerPrim->IgnoreComponentWhenMoving(MissilePrim, true);
+	// 		}
+	// 	}
+	// }
 	if (UPrimitiveComponent* MissilePrim = Cast<UPrimitiveComponent>(Missle->GetRootComponent()))
 	{
-		// 미사일이 오너를 무시
-		MissilePrim->IgnoreActorWhenMoving(OwnerChar, true);
+		// 액터 단위 무시만 남겨둠
+		MissilePrim->IgnoreActorWhenMoving(OwnerChar,true);
 		MissilePrim->MoveIgnoreActors.AddUnique(OwnerChar);
-		
-		// 오너의 모든 컴포넌트와 상호 무시 (양방향)
-		TArray<UPrimitiveComponent*> OwnerPrims;
-		OwnerChar->GetComponents<UPrimitiveComponent>(OwnerPrims);
-		for (UPrimitiveComponent* OwnerPrim : OwnerPrims)
-		{
-			if (OwnerPrim)
-			{
-				MissilePrim->IgnoreComponentWhenMoving(OwnerPrim, true);
-				OwnerPrim->IgnoreComponentWhenMoving(MissilePrim, true);
-			}
-		}
 	}
-
+		
 	// ========== 발사 및 유도 설정 ==========
 	const FVector LaunchDir = SpawnRot.Vector();
 	UProjectileMovementComponent* Move = ForceMakeMovableAndLaunch(Missle, LaunchDir);
@@ -207,38 +213,49 @@ AActor* UGA_MissleFire::PickBestTarget(const AActor* Owner) const
 
 	const FVector OLoc = Owner->GetActorLocation();
 
-	// Enemy가 발사하는 경우 → 플레이어를 타겟으로
+	// Enemy가 발사하는 경우 → 플레이어를 타겟으로 (기존 유지)
 	if (Owner->ActorHasTag(TEXT("Enemy")))
 	{
 		return UGameplayStatics::GetPlayerPawn(World, 0);
 	}
 
-	// 플레이어가 발사하는 경우 → 가장 가까운 Enemy 찾기
-	// 성능 최적화: 특정 Enemy 클래스만 직접 검색 (모든 액터를 가져오지 않음)
-	TArray<AActor*> Candidates;
-	
-	// EnemyMecha 클래스로 검색
-	TArray<AActor*> EnemyMechas;
-	UGameplayStatics::GetAllActorsOfClass(World, AEnemyMecha::StaticClass(), EnemyMechas);
-	Candidates.Append(EnemyMechas);
-	
+	// ========== 성능 최적화: 주변 반경(MaxLockDistance) 내의 적만 스캔 ==========
+	TArray<FOverlapResult> OverlapResults;
+	FCollisionQueryParams QueryParams;
+	QueryParams.AddIgnoredActor(Owner); // 본인은 검색에서 제외
 
-	// 최단 거리의 적 선택
+	// 반경 내의 Pawn 채널 검색 (콜리전 채널은 프로젝트에 맞게 수정 가능)
+	bool bHit = World->OverlapMultiByChannel(
+		OverlapResults,
+		OLoc,
+		FQuat::Identity,
+		ECC_Pawn, // 적들이 Pawn 콜리전 채널을 사용한다고 가정
+		FCollisionShape::MakeSphere(MaxLockDistance),
+		QueryParams
+	);
+
 	AActor* Best = nullptr;
-	const float MaxDistSq = MaxLockDistance * MaxLockDistance;
-	float BestDistSq = MaxDistSq;
+	float BestDistSq = MaxLockDistance * MaxLockDistance;
 
-	for (AActor* Candidate : Candidates)
+	if (bHit)
 	{
-		if (!Candidate) continue;
-		
-		const float DistSq = FVector::DistSquared(OLoc, Candidate->GetActorLocation());
-		if (DistSq < BestDistSq) 
-		{ 
-			BestDistSq = DistSq; 
-			Best = Candidate; 
+		for (const FOverlapResult& Result : OverlapResults)
+		{
+			AActor* Candidate = Result.GetActor();
+            
+			// 검색된 액터가 AEnemyMecha 인지 확인
+			if (Candidate && Candidate->IsA(AEnemyMecha::StaticClass()))
+			{
+				const float DistSq = FVector::DistSquared(OLoc, Candidate->GetActorLocation());
+				if (DistSq < BestDistSq) 
+				{ 
+					BestDistSq = DistSq; 
+					Best = Candidate; 
+				}
+			}
 		}
 	}
+    
 	return Best;
 }
 

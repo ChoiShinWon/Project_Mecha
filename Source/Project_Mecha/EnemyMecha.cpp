@@ -132,13 +132,15 @@ void AEnemyMecha::BeginPlay()
                 }
             }
 
-            // HUD 초기화 (서버)
+            // HUD 초기화 
             if (EnemyHUDWidgetComp && AbilitySystem && AttributeSet)
             {
-                UUserWidget* WidgetObject = EnemyHUDWidgetComp->GetUserWidgetObject();
-                if (UEnemyHUDWidget* EnemyHUD = Cast<UEnemyHUDWidget>(WidgetObject))
+                // 여기서 딱 한 번만 Cast를 수행하고 변수에 저장해둔다
+                CachedEnemyHUD = Cast<UEnemyHUDWidget>(EnemyHUDWidgetComp->GetUserWidgetObject());
+        
+                if (CachedEnemyHUD)
                 {
-                    EnemyHUD->InitWithASC(AbilitySystem, AttributeSet);
+                    CachedEnemyHUD->InitWithASC(AbilitySystem, AttributeSet);
                 }
             }
         }
@@ -285,15 +287,9 @@ void AEnemyMecha::HandleDeath()
     }
 
     // ========== HUD 정리 ==========
-    if (EnemyHUDWidgetComp)
+    if (CachedEnemyHUD)
     {
-        if (UUserWidget* WidgetObject = EnemyHUDWidgetComp->GetUserWidgetObject())
-        {
-            if (UEnemyHUDWidget* EnemyHUD = Cast<UEnemyHUDWidget>(WidgetObject))
-            {
-                EnemyHUD->OnOwnerDead();
-            }
-        }
+        CachedEnemyHUD->OnOwnerDead();
     }
 
     // ========== 보스 체력바 정리 ==========
@@ -325,15 +321,9 @@ void AEnemyMecha::OnHealthChanged(const FOnAttributeChangeData& Data)
     const float MaxHealth = AttributeSet ? AttributeSet->GetMaxHealth() : 1.f;
 
     // ========== HUD 체력바 업데이트 ==========
-    if (EnemyHUDWidgetComp)
+    if (CachedEnemyHUD)
     {
-        if (UUserWidget* WidgetObject = EnemyHUDWidgetComp->GetUserWidgetObject())
-        {
-            if (UEnemyHUDWidget* EnemyHUD = Cast<UEnemyHUDWidget>(WidgetObject))
-            {
-                EnemyHUD->ApplyHealth(NewHealth, MaxHealth);
-            }
-        }
+        CachedEnemyHUD->ApplyHealth(NewHealth, MaxHealth);
     }
 
     // ========== 보스 체력바 업데이트 ==========

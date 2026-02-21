@@ -659,7 +659,7 @@ bool AMechaCharacterBase::IsOverheated() const
 {
     return (AbilitySystem && AbilitySystem->HasMatchingGameplayTag(Tag_Overheated));
 }
-
+// === Reload 상태 확인 ===
 bool AMechaCharacterBase::IsReloading() const
 {
     return (AbilitySystem && AbilitySystem->HasMatchingGameplayTag(Tag_Reloading));
@@ -841,7 +841,9 @@ void AMechaCharacterBase::ClearLockOn()
     }
 }
 
-// 락온 타겟 찾기
+// ========================================
+// 락온 타겟 찾기 
+// ========================================
 AActor* AMechaCharacterBase::FindLockOnTarget()
 {
     UWorld* World = GetWorld();
@@ -854,38 +856,53 @@ AActor* AMechaCharacterBase::FindLockOnTarget()
     FRotator YawRot(0.f, ViewRot.Yaw, 0.f);
     FVector  Forward = YawRot.Vector();
 
-    // ========== 후보 수집 (EnemyMecha만) ==========
-    TArray<AActor*> Candidates;
-    UGameplayStatics::GetAllActorsOfClass(World, AEnemyMecha::StaticClass(), Candidates);
+    // ========== 후보 수집 최적화: OverlapMultiByChannel 사용 ==========
+    TArray<FOverlapResult> OverlapResults;
+    FCollisionQueryParams QueryParams;
+    QueryParams.AddIgnoredActor(this); // 본인 무시
+
+    bool bHit = World->OverlapMultiByChannel(
+        OverlapResults,
+        MyLocation,
+        FQuat::Identity,
+        ECC_Pawn, // 적들이 속한 콜리전 채널
+        FCollisionShape::MakeSphere(LockOnMaxDistance),
+        QueryParams
+    );
 
     float   BestDistSq = TNumericLimits<float>::Max();
     AActor* BestTarget = nullptr;
 
-    // ========== 거리 및 각도 체크 ==========
-    for (AActor* Candidate : Candidates)
+    if (bHit)
     {
-        if (!Candidate || Candidate == this) continue;
-
-        FVector ToTarget = Candidate->GetActorLocation() - MyLocation;
-        float   DistSq = ToTarget.SizeSquared();
-
-        // 최대 거리 체크
-        if (DistSq > FMath::Square(LockOnMaxDistance))
-            continue;
-
-        // 시야 각도 체크
-        FVector Dir = ToTarget.GetSafeNormal();
-        float   Dot = FVector::DotProduct(Forward, Dir);
-        float   AngleDeg = FMath::RadiansToDegrees(FMath::Acos(FMath::Clamp(Dot, -1.f, 1.f)));
-
-        if (AngleDeg > LockOnMaxAngle)
-            continue;
-
-        // 가장 가까운 타겟 선택
-        if (DistSq < BestDistSq)
+        for (const FOverlapResult& Result : OverlapResults)
         {
-            BestDistSq = DistSq;
-            BestTarget = Candidate;
+            AActor* Candidate = Result.GetActor();
+            
+            // 유효성 및 클래스 확인
+            if (!Candidate || !Candidate->IsA(AEnemyMecha::StaticClass())) continue;
+
+            FVector ToTarget = Candidate->GetActorLocation() - MyLocation;
+            float   DistSq = ToTarget.SizeSquared();
+
+            // 최대 거리 체크 (Overlap으로 이미 걸러졌지만 안전장치)
+            if (DistSq > FMath::Square(LockOnMaxDistance))
+                continue;
+
+            // 시야 각도 체크 (내적 활용)
+            FVector Dir = ToTarget.GetSafeNormal();
+            float   Dot = FVector::DotProduct(Forward, Dir);
+            float   AngleDeg = FMath::RadiansToDegrees(FMath::Acos(FMath::Clamp(Dot, -1.f, 1.f)));
+
+            if (AngleDeg > LockOnMaxAngle)
+                continue;
+
+            // 가장 가까운 타겟 선택
+            if (DistSq < BestDistSq)
+            {
+                BestDistSq = DistSq;
+                BestTarget = Candidate;
+            }
         }
     }
 
