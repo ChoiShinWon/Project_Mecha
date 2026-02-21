@@ -54,7 +54,7 @@ public:
     float FallbackSpawnOffset = 100.f;
 
     // AI가 채워줄 타겟
-    UPROPERTY(BlueprintReadWrite, Category = "AI")
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")
     AActor* CurrentTarget;
 
     // Behavior Tree 등에서 호출할 Ability 발사 함수
@@ -159,7 +159,9 @@ public:
     void SetHoverParticleRotation(FRotator NewRotation);
 
 protected:
-
+    UPROPERTY()
+    class UEnemyHUDWidget* CachedEnemyHUD = nullptr;
+    
     // 플레이어와 같은 AttributeSet 사용 (Health, MaxHealth 등)
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "GAS", meta = (AllowPrivateAccess = "true"))
     UMechaAttributeSet* AttributeSet;
