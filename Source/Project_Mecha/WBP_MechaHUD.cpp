@@ -54,9 +54,9 @@ void UWBP_MechaHUD::SetHealthPercent(float InPercent)
 
 	// ========== 체력 비율에 따라 색상 변경 ==========
 	const FLinearColor HPColor =
-		(Clamped >= HealthCautionThreshold) ? HealthColorHigh :  // 높음: 초록
-		(Clamped >= HealthWarningThreshold) ? HealthColorMid :   // 중간: 주황
-		HealthColorLow;                                          // 낮음: 빨강
+		(Clamped >= HealthCautionThreshold) ? HealthColorHigh : 
+		(Clamped >= HealthWarningThreshold) ? HealthColorMid :  
+		HealthColorLow;                                          
 
 	PB_Health->SetFillColorAndOpacity(HPColor);
 
@@ -117,7 +117,6 @@ void UWBP_MechaHUD::BindAmmoListeners()
 void UWBP_MechaHUD::UnbindAmmoListeners()
 {
 	if (!ASC) return;
-
 	ASC->GetGameplayAttributeValueChangeDelegate(
 		UMechaAttributeSet::GetAmmoMagazineAttribute()).Remove(HandleMag);
 	ASC->GetGameplayAttributeValueChangeDelegate(

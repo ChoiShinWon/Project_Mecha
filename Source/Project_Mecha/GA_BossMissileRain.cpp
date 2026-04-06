@@ -56,6 +56,7 @@ void UGA_BossMissileRain::ActivateAbility(
         {
             if (UAbilitySystemComponent* ASC = ASI->GetAbilitySystemComponent())
             {
+                // 슈퍼 아머 태그 부여 (피격시 몽타주가 끊김 방지)
                 ASC->AddLooseGameplayTag(
                     FGameplayTag::RequestGameplayTag(TEXT("State.SuperArmor"))
                 );
@@ -88,7 +89,7 @@ void UGA_BossMissileRain::ActivateAbility(
         return;
     }
 
-    // 3) 미사일 발사 타이머 시작 (쌍 발사)
+    // 3) 미사일 발사 타이머 시작 
     World->GetTimerManager().SetTimer(
         FireTimerHandle,
         this,
@@ -98,7 +99,7 @@ void UGA_BossMissileRain::ActivateAbility(
         0.0f
     );
 
-    // 4) 7초 후 패턴 종료
+    // 4) HoverDuration 후 패턴 종료
     World->GetTimerManager().SetTimer(
         EndTimerHandle,
         this,
@@ -279,7 +280,7 @@ void UGA_BossMissileRain::SpawnMissilePair()
         LeftRot = UKismetMathLibrary::FindLookAtRotation(LeftLoc, TargetLoc);
         RightRot = UKismetMathLibrary::FindLookAtRotation(RightLoc, TargetLoc);
 
-        // 100% 명중 방지용 랜덤 오프셋 (조금만 건드림)
+        // 100% 명중 방지용 랜덤 오프셋 
         const float RandYawOffsetL = FMath::RandRange(-5.0f, 5.0f);
         const float RandPitchOffsetL = FMath::RandRange(-3.0f, 3.0f);
         LeftRot.Yaw += RandYawOffsetL;

@@ -892,7 +892,8 @@ AActor* AMechaCharacterBase::FindLockOnTarget()
             // 시야 각도 체크 (내적 활용)
             FVector Dir = ToTarget.GetSafeNormal();
             float   Dot = FVector::DotProduct(Forward, Dir);
-            float   AngleDeg = FMath::RadiansToDegrees(FMath::Acos(FMath::Clamp(Dot, -1.f, 1.f)));
+            float   AngleDeg = FMath::RadiansToDegrees(FMath::Acos
+                (FMath::Clamp(Dot, -1.f, 1.f)));
 
             if (AngleDeg > LockOnMaxAngle)
                 continue;
