@@ -1,4 +1,3 @@
-<img width="400" height="208" alt="Frontline 스킬 (2)" src="https://github.com/user-attachments/assets/b9b88e7d-7b26-40f7-9535-d5a26b50e7d3" />
 # 🤖 Project: FRONTLINE
 
 ![Project Banner/Screenshot](<img width="400" height="208" alt="Frontline 스킬 (2)" src="https://github.com/user-attachments/assets/b9b88e7d-7b26-40f7-9535-d5a26b50e7d3" />)
