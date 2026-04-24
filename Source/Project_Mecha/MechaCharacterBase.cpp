@@ -473,7 +473,7 @@ void AMechaCharacterBase::SetupPlayerInputComponent(UInputComponent* PlayerInput
         // ========== 스프린트(QuickBoost) ==========
         if (IA_Sprint)
         {
-            EIC->BindAction(IA_Sprint, ETriggerEvent::Triggered, this, &AMechaCharacterBase::Input_SprintStart);
+            EIC->BindAction(IA_Sprint, ETriggerEvent::Started, this, &AMechaCharacterBase::Input_SprintStart);
         }
 
         // ========== 호버 ==========
@@ -892,7 +892,8 @@ AActor* AMechaCharacterBase::FindLockOnTarget()
             // 시야 각도 체크 (내적 활용)
             FVector Dir = ToTarget.GetSafeNormal();
             float   Dot = FVector::DotProduct(Forward, Dir);
-            float   AngleDeg = FMath::RadiansToDegrees(FMath::Acos(FMath::Clamp(Dot, -1.f, 1.f)));
+            float   AngleDeg = FMath::RadiansToDegrees(FMath::Acos
+                (FMath::Clamp(Dot, -1.f, 1.f)));
 
             if (AngleDeg > LockOnMaxAngle)
                 continue;
@@ -930,14 +931,11 @@ void AMechaCharacterBase::UpdateLockOnView(float DeltaTime)
 
     // ========== 타겟을 바라보는 회전 계산 ==========
     FRotator DesiredRot = UKismetMathLibrary::FindLookAtRotation(ViewLocation, TargetLocation);
-
     // 피치 각도 제한
     DesiredRot.Pitch = FMath::Clamp(DesiredRot.Pitch, LockOnPitchMin, LockOnPitchMax);
-
     // 부드럽게 보간
     const FRotator CurrentRot = Controller->GetControlRotation();
     const FRotator NewRot = FMath::RInterpTo(CurrentRot, DesiredRot, DeltaTime, LockOnTurnSpeed);
-
     Controller->SetControlRotation(NewRot);
 }
 
@@ -957,6 +955,9 @@ void AMechaCharacterBase::PlayHitReactFromDirection(const FVector& AttackWorldLo
     {
         return;
     }
+    
+    // 피격 쿨타임 중이면 애니메이션 재생 안함
+    if (!bCanPlayHitReact) return;
 
     if (!HitReactMontage || !GetMesh())
     {
@@ -1020,6 +1021,16 @@ void AMechaCharacterBase::PlayHitReactFromDirection(const FVector& AttackWorldLo
 
         // 해당 방향 섹션으로 점프
         Anim->Montage_JumpToSection(SectionName, HitReactMontage);
+        
+        // 애니메이션을 틀었으면 변수를 잠그고 타이머 작동
+        bCanPlayHitReact = false;
+        GetWorldTimerManager().SetTimer(
+            TimerHandle_LifeSpanExpired,
+            this,
+            &AMechaCharacterBase::ResetHitReactWindow,
+            HitReactInterval,
+            false
+            );
     }
 }
 
