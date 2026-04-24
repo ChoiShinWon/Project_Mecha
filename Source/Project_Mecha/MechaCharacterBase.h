@@ -90,6 +90,15 @@ protected:
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "VFX")
     UParticleSystem* OverheatParticleSystem;
 
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "HitReact")
+    float HitReactInterval = 1.0f;
+    
+    bool bCanPlayHitReact = true;
+    FTimerHandle TimerHadnel_HitReactInterval;
+    
+    UFUNCTION()
+    void ResetHitReactWindow() {bCanPlayHitReact = true;}
+    
     // ---- Input assets ----
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
     UInputMappingContext* DefaultMappingContext;

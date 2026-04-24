@@ -363,7 +363,7 @@ void AEnemyMecha::PlayHitReact()
         return;
     }
 
-    // 2) 🔹 SuperArmor 중이면 HitReact 자체를 막기
+    // 2) SuperArmor 중이면 HitReact 자체를 막기
     if (AbilitySystem &&
         AbilitySystem->HasMatchingGameplayTag(
             FGameplayTag::RequestGameplayTag(TEXT("State.SuperArmor"))
