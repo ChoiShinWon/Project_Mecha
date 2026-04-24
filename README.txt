@@ -6,7 +6,7 @@
 
 ## 📖 프로젝트 개요 (Overview)
 - **개발 기간:** 2025.10.30 ~ 2025.12.15 ([2]개월)
-- **개발 인원:** 1인 개발 (또는 팀 개발)
+- **개발 인원:** 1인 개발 
 - **사용 엔진:** Unreal Engine 5.3
 - **핵심 기술:** C++, Blueprint, GAS(Gameplay Ability System), Enhanced Input, UMG, Behavior Tree
 
@@ -16,9 +16,13 @@
 
 ### 1. ⚙️ GAS 기반의 견고한 스탯 및 어빌리티 시스템
 캐릭터의 체력, 에너지, 탄약부터 각종 공격 스킬(어설트 부스트, 호버링, 미사일 발사)을 GAS 아키텍처로 구현하여 확장성과 안정성을 확보했습니다.
-* **통합 Attribute 관리:** `MechaAttributeSet`을 통해 플레이어와 적의 공통 스탯(Health, Energy, Ammo)을 중앙 집중화.
-* **상태 제어(Tag-Driven):** 에너지가 고갈되면 `State.Overheated` 태그를 부여해 이동기를 제한하고, 탄약이 없으면 발사(`Block.Fire`)를 막는 등 태그 기반의 직관적인 상태 제어 구현.
-* **모듈화된 어빌리티(Gameplay Ability):** * `GA_AssaultBoost`, `GA_Hover`: `MOVE_Flying` 모드 전환 및 실시간 에너지 소모(Drain GE) 제어.
+
+* **통합 Attribute 관리:** 
+`MechaAttributeSet`을 통해 플레이어와 적의 공통 스탯(Health, Energy, Ammo)을 중앙 집중화.
+* **상태 제어(Tag-Driven):** 
+에너지가 고갈되면 `State.Overheated` 태그를 부여해 이동기를 제한하고, 탄약이 없으면 발사(`Block.Fire`)를 막는 등 태그 기반의 직관적인 상태 제어 구현.
+* **모듈화된 어빌리티(Gameplay Ability):
+`GA_AssaultBoost`, `GA_Hover`: `MOVE_Flying` 모드 전환 및 실시간 에너지 소모(Drain GE) 제어.
   * `GA_Attack`: `SphereTrace`를 통한 타격 판정 및 `SetByCaller`를 활용한 동적 데미지 GE 적용.
 
 ### 2. ⚡ Tick 연산을 배제한 Event-Driven UI 최적화
