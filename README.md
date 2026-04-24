@@ -1,6 +1,6 @@
 # 🤖 Project: FRONTLINE
 
-(./Images/Skill 2.gif) (./Images/Skill 5.gif) (./Images/Skill 7.gif)
+(./Images/Skill2.gif) (./Images/Skill7.gif) (./Images/Skill5.gif)
 
 > "Unreal Engine 5의 GAS(Gameplay Ability System)와 Event-Driven 아키텍처를 기반으로 설계된 3D 메카 액션 게임"
 
