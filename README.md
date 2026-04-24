@@ -2,7 +2,7 @@
 
 ![Project Banner/Screenshot]([대표 게임플레이 스크린샷 또는 움짤 링크 삽입])
 
-> "Unreal Engine 5의 GAS(Gameplay Ability System)와 Event-Driven 아키텍처를 기반으로 설계된 하이스피드 3D 메카 액션 게임"
+> "Unreal Engine 5의 GAS(Gameplay Ability System)와 Event-Driven 아키텍처를 기반으로 설계된 3D 메카 액션 게임"
 
 ## 📖 프로젝트 개요 (Overview)
 - **개발 기간:** 2025.10.30 ~ 2025.12.15 ([2]개월)
@@ -21,7 +21,7 @@
 `MechaAttributeSet`을 통해 플레이어와 적의 공통 스탯(Health, Energy, Ammo)을 중앙 집중화.
 * **상태 제어(Tag-Driven):** 
 에너지가 고갈되면 `State.Overheated` 태그를 부여해 이동기를 제한하고, 탄약이 없으면 발사(`Block.Fire`)를 막는 등 태그 기반의 직관적인 상태 제어 구현.
-* **모듈화된 어빌리티(Gameplay Ability):
+* **모듈화된 어빌리티(Gameplay Ability):**
 `GA_AssaultBoost`, `GA_Hover`: `MOVE_Flying` 모드 전환 및 실시간 에너지 소모(Drain GE) 제어.
   * `GA_Attack`: `SphereTrace`를 통한 타격 판정 및 `SetByCaller`를 활용한 동적 데미지 GE 적용.
 
@@ -58,7 +58,7 @@
 ---
 
 ## 📂 주요 소스 코드 구조 (Directory Structure)
-*(💡 면접관님, 아래 링크를 클릭하시면 해당 C++ 파일로 이동합니다.)*
+*(💡  아래 링크를 클릭하시면 해당 C++ 파일로 이동합니다.!)*
 
 * **`[MechaCharacterBase.cpp](./Source/Project_Mecha/MechaCharacterBase.cpp)`** : 플레이어 코어 로직 (Enhanced Input, 락온 시스템, 방향 피격 판정)
 * **`[MechaAttributeSet.cpp](./Source/Project_Mecha/MechaAttributeSet.cpp)`** : GAS 스탯 정의 및 클램프(Clamp) 로직
