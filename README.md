@@ -1,4 +1,4 @@
-# 🤖 Project: FRONTLINE (가제: 프로젝트 이름 입력)
+# 🤖 Project: FRONTLINE
 
 ![Project Banner/Screenshot]([대표 게임플레이 스크린샷 또는 움짤 링크 삽입])
 
