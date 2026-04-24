@@ -56,41 +56,7 @@ void UBossHealthWidget::UpdateHealthBar(float NewHealth, float MaxHealth)
         }
     }
 
-    // ========== 체력바 업데이트 ==========
-    if (PB_BossHealth && MaxHealth > 0.f)
-    {
-        const float Percent = FMath::Clamp(NewHealth / MaxHealth, 0.f, 1.f);
-        PB_BossHealth->SetPercent(Percent);
 
-        // 체력 비율에 따라 색상 변경
-        FLinearColor BarColor;
-        if (Percent > 0.5f)
-        {
-            // 50% 이상
-            BarColor = ColorHigh;
-        }
-        else if (Percent > 0.25f)
-        {
-            // 25~50%
-            BarColor = ColorMid;
-        }
-        else
-        {
-            // 25% 이하
-            BarColor = ColorLow;
-        }
-        PB_BossHealth->SetFillColorAndOpacity(BarColor);
-    }
-
-    // ========== 체력 텍스트 업데이트 ==========
-    if (TxtBossHealthValue)
-    {
-        const int32 IntHealth = FMath::RoundToInt(NewHealth);
-        const int32 IntMax = FMath::RoundToInt(MaxHealth);
-        TxtBossHealthValue->SetText(FText::FromString(
-            FString::Printf(TEXT("%d / %d"), IntHealth, IntMax)
-        ));
-    }
 
     // 현재 체력 저장 (다음 비교용)
     LastHealth = NewHealth;
