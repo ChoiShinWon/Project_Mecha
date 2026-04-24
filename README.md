@@ -60,7 +60,7 @@
 ## 📂 주요 소스 코드 구조 (Directory Structure)
 *(💡  아래 링크를 클릭하시면 해당 C++ 파일로 이동합니다.!)*
 
-* **`[MechaCharacterBase.cpp](Source/Project_Mecha/MechaCharacterBase.cpp)`** : 플레이어 코어 로직 (Enhanced Input, 락온 시스템, 방향 피격 판정)
+* **`[MechaCharacterBase.cpp](./Source/Project_Mecha/MechaCharacterBase.cpp)`** : 플레이어 코어 로직 (Enhanced Input, 락온 시스템, 방향 피격 판정)
 * **`[MechaAttributeSet.cpp](./Source/Project_Mecha/MechaAttributeSet.cpp)`** : GAS 스탯 정의 및 클램프(Clamp) 로직
 * **`[MissionManager.cpp](./Source/Project_Mecha/MissionManager.cpp)`** : Event-Driven 기반 Tick-less 미션 및 보스 페이즈 관리자
 * **`[GA_AssaultBoost.cpp](./Source/Project_Mecha/GA_AssaultBoost.cpp)`** : 에너지 소모 및 동적 카메라 효과(FOV, 오프셋 보간) 어빌리티
