@@ -1,7 +1,7 @@
 # 🤖 Project: FRONTLINE
 
-![프로젝트 커버](./Images/Cover.png)
-![전투 및 부스트 연출](./Images/Combat.gif)
+![메인 게임플레이](./Images/Skill2.gif)
+![부스트 및 전투 연출](./Images/Skill7.gif)
 
 > Unreal Engine 5 기반 3D 메카 PVE 액션 프로젝트입니다.  
 > 본 저장소는 팀 레포 소개가 아닌, **개인 기여 중심 개발 포트폴리오 문서**를 목적으로 작성되었습니다.
