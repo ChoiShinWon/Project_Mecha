@@ -3,73 +3,185 @@
 ![프로젝트 커버](./Images/Cover.png)
 ![전투 및 부스트 연출](./Images/Combat.gif)
 
-> Unreal Engine 5 기반 3D 메카 액션 게임입니다.  
-> 본 저장소는 팀 결과물 전체 소개가 아닌, **개인 기여 중심 포트폴리오 문서**를 목적으로 작성되었습니다.
+> Unreal Engine 5 기반 3D 메카 PVE 액션 프로젝트입니다.  
+> 본 저장소는 팀 레포 소개가 아닌, **개인 기여 중심 개발 포트폴리오 문서**를 목적으로 작성되었습니다.
 
 ---
 
 ## 🔗 프로젝트 링크 (Links)
-* **Repository:** [GitHub Repository 링크 입력](#)
-* **시연 영상(선택):** [YouTube 또는 Vimeo 링크 입력](#)
+
+- **Repository:** [GitHub Repository 링크 입력](#)
+- **시연 영상(선택):** [YouTube 또는 Vimeo 링크 입력](#)
 
 ---
 
 ## 📖 프로젝트 개요 (Overview)
-* **프로젝트 성격:** 개인 포트폴리오용 정리 저장소
-* **저장소 공개 여부:** Public
-* **개발 기간:** 2025.10.30 ~ 2025.12.15 (약 2개월)
-* **개발 인원:** 1인 개발
-* **사용 엔진:** Unreal Engine 5.3
-* **주요 라이브러리 및 시스템:** C++, Blueprint, GAS, Enhanced Input, UMG, Behavior Tree
-* **대상 플랫폼:** PC (Windows)
-* **대상 플랫폼 버전:** Windows 10 / Windows 11
-* **지원 포지션 관점:** 게임플레이 프로그래머
+
+- **프로젝트 성격:** 개인 포트폴리오용 정리 저장소
+- **저장소 공개 여부:** Public
+- **개발 기간:** 2025.10.30 ~ 2025.12.15 (약 2개월)
+- **개발 인원:** 1인 개발
+- **사용 엔진:** Unreal Engine 5.3
+- **주요 기술:** C++, Blueprint, GAS, Enhanced Input, UMG, Behavior Tree
+- **개발 환경:** Visual Studio
+- **대상 플랫폼:** PC (Windows)
+- **대상 플랫폼 버전:** Windows 10 / Windows 11
+- **지원 포지션 관점:** 게임플레이 프로그래머
 
 ---
 
-## 🎯 핵심 기여 요약 (My Contributions)
+## 🎯 핵심 전투 목표
 
-### 1) 전투 루프 설계 및 조작감 구현
-플레이어 입력부터 능력 실행, 피격 반응, UI 피드백까지 일관된 전투 루프를 설계했습니다.
-* 이동, 점프, 부스트, 사격, 재장전 입력 체계 구현
-* 리소스(체력, 에너지, 탄약)와 액션 상태 동기화
-* 피격 방향 판정과 카메라 반응을 결합한 전투 피드백 구성
+- 정적인 교환전이 아닌, 기동과 판단을 요구하는 전투 경험 설계
+- 플레이어가 즉시 체감 가능한 손맛 중심 전투 피드백 구현
+- 보스 패턴을 통해 대응 방식을 바꾸게 만드는 전투 흐름 구성
+
+---
+
+## 🎮 게임 플레이 플로우
+
+- 게임 시작 후 `MissionManager`가 미션 상태를 중앙에서 관리
+- 일반 전투 구간에서 플레이어 GAS와 Enemy AI 전투 루프 동작
+- 적 처치 이벤트(`NotifyEnemyKilled`) 기반 킬 카운트 누적
+- 목표 수 달성 시 보스 페이즈 전환(`StartBossPhase`)
+- 보스 처치 시 슬로우모션 연출 후 클리어 UI 출력
+
+---
+
+## 🛠️ 핵심 기여 요약 (My Contributions)
+
+### 1) 플레이어 전투 코어 구조 설계
+`ACharacter` 기반 베이스 클래스에서 전투, 입력, 카메라, GAS를 통합했습니다.
+
+- `AbilitySystemComponent`와 `MechaAttributeSet` 기반 전투 상태 관리
+- Enhanced Input 이벤트를 GAS 어빌리티 실행 파이프라인으로 연결
+- 락온, 시점 보간, 피격 방향 판정을 전투 흐름에 결합
 
 ### 2) GAS 기반 전투 시스템 모듈화
-확장 가능한 능력 구조를 목표로 Gameplay Ability를 기능 단위로 분리했습니다.
-* `MechaAttributeSet` 기반 공통 스탯 통합 관리
-* `GA_AssaultBoost`, `GA_Hover`, `GA_Attack`, `GA_GunFire`, `GA_Reload` 구현
-* GameplayTag(`State.Overheated`, `Block.Fire`) 기반 상태 제어
+어빌리티를 역할 단위로 분리하고, 태그 기반으로 상태 제어를 통합했습니다.
+
+- `GA_AssaultBoost`, `GA_Hover`, `GA_Attack`, `GA_GunFire`, `GA_Reload` 구현
+- `State.Overheated`, `Block.Fire` 등 `GameplayTag` 기반 제약 적용
+- `GE_InitAttributes_*`로 초기 스탯을 코드 하드코딩 대신 데이터 분리
 
 ### 3) Tick-less Event-Driven UI 최적화
-매 프레임 갱신 방식 대신, 값 변경 시점에만 UI를 업데이트하도록 설계했습니다.
-* Attribute Delegate 기반 HUD 갱신
-* MissionManager의 Tick 비활성화(`bCanEverTick = false`)
-* 미션 진행, 보스 체력, 전투 경고 UI를 이벤트 기반으로 분리 연동
+매 프레임 UI 갱신을 제거하고, 값 변경 시점에만 반응하도록 구성했습니다.
 
-### 4) 적 AI 및 보스 페이즈 패턴 구현
-일반 적과 보스 로직을 분리해 전투 템포와 난이도 곡선을 구성했습니다.
-* 일반 적의 추적, 공격, 피격, 사망 흐름 구현
-* `GA_BossMissileRain` 기반 보스 패턴 구성
-* 락온 타겟 탐색 최적화 (거리, 시야각 기반 필터링)
+- `GetGameplayAttributeValueChangeDelegate` 기반 HUD 갱신
+- `MissionManager`를 `bCanEverTick = false` 구조로 설계
+- 보스 체력바, 경고 UI, 클리어 UI를 이벤트로 분리 연동
+- 위젯 참조 캐싱 및 생명주기 제어로 불필요한 메모리/연산 방지
+
+### 4) Enemy/Boss 전투 패턴 구조화
+일반 적 구조를 재사용하면서 보스 전용 패턴만 선택 확장했습니다.
+
+- `AEnemyMecha` 기반 공통 전투 시스템 재사용
+- 보스 전용 패턴 `GA_BossMissileRain` 추가
+- BT/Blackboard 연계로 상태 기반 의사결정 구성
+- Boss 전투 중 UI 및 상태 락을 연동해 전투 흐름 안정화
+
+### 5) 물리/벡터 기반 전투 감각 개선
+단순 연출이 아니라 수학/물리 기반으로 조작감을 개선했습니다.
+
+- 락온 후보 탐색 시 Dot Product 기반 시야각 필터링
+- `FMath::RInterpTo`로 카메라 회전을 부드럽게 보정
+- 어설트부스트 시 `MOVE_Flying` 전환과 중력/마찰 간섭 차단
+- 미사일은 `ProjectileMovementComponent` Homing 기능으로 Tick-less 추적
 
 ---
 
-## 🧩 프로젝트 구조 및 개발 컨벤션 (Structure and Conventions)
+## 🧩 코드 스타일 및 아키텍처 규칙
 
-### 💻 코드 스타일 및 아키텍처 규칙
-* **Unreal Engine 표준 네이밍** 준수
-* `UPROPERTY`, `UFUNCTION` 카테고리 명시
-* `bool` 접두사 `b` 사용
-* 전투 규칙과 상태는 C++ 중심으로 관리, 연출 및 배치는 Blueprint로 분리
-* 이벤트 기반 업데이트를 우선 적용해 Tick 의존 최소화
+- Unreal Engine 표준 네이밍 준수
+- `UPROPERTY`, `UFUNCTION` 카테고리 명시
+- `bool` 접두사 `b` 사용
+- 전투 규칙과 상태는 C++ 중심, 연출과 튜닝은 Blueprint로 분리
+- 이벤트 기반 업데이트를 우선 적용해 Tick 의존 최소화
 
-### 📦 에셋 관리 방식 (Asset Management)
-* C++ 클래스는 `Source/Project_Mecha`에서 기능 단위로 관리
-* UMG, BP, 이펙트 에셋은 `Content` 하위에서 역할별 폴더로 분리 관리
-* GAS 관련 Ability/Effect 에셋은 네이밍 규칙(`GA_`, `GE_`)으로 일관화
+---
 
-### 📂 폴더 구조 (Directory Structure)
+## 📦 에셋 관리 방식 (Asset Management)
+
+- C++ 클래스는 `Source/Project_Mecha`에서 기능 단위로 관리
+- UMG, BP, 이펙트 에셋은 `Content` 하위 역할별 폴더로 분리
+- GAS 관련 에셋은 네이밍 규칙(`GA_`, `GE_`)으로 일관화
+
+---
+
+## 🌟 주요 기능 상세 (Features)
+
+- **플레이어 전투 코어 로직**  
+  입력 처리, 락온, 피격 방향 판정, 전투 흐름 제어  
+  → `MechaCharacterBase.cpp`
+
+- **GAS 스탯 시스템**  
+  체력, 에너지, 탄약 Attribute 정의 및 보정  
+  → `MechaAttributeSet.cpp`
+
+- **부스트 능력 구현**  
+  물리 간섭 제거형 기동 처리 및 카메라 반응  
+  → `GA_AssaultBoost.cpp`
+
+- **사격 및 발사 조건 처리**  
+  태그 기반 발사 제약 및 전투 리소스 연동  
+  → `GA_GunFire.cpp`
+
+- **유도 미사일 처리**  
+  Homing 타겟 지정 및 공간 쿼리 기반 타겟 필터링  
+  → `GA_MissleFire.cpp`
+
+- **적 및 보스 전투 로직**  
+  AI 전투 행동, 보스 상태 전환, 피격 및 사망 처리  
+  → `EnemyMecha.cpp`
+
+- **미션 및 보스 페이즈 관리**  
+  Tick-less 미션 진행, 킬 카운트, 보스 페이즈 전환  
+  → `MissionManager.cpp`
+
+- **이벤트 기반 HUD 업데이트**  
+  Delegate 기반 실시간 UI 반영  
+  → `WBP_MechaHUD.cpp`
+
+---
+
+## 🧪 트러블슈팅 (Troubleshooting)
+
+### 1) 시야 밖 적이 락온되는 문제
+- **원인:** 거리 기반 근접 탐색만 사용해 방향 정보 누락
+- **해결:** 전방 벡터와 대상 벡터 Dot Product 계산 후 FOV 각도 필터 적용
+- **결과:** 정면 우선 락온으로 조작 신뢰도 개선
+
+### 2) 어설트부스트 궤적이 포물선처럼 깨지는 문제
+- **원인:** Falling 상태에서 중력/마찰이 전진 가속에 간섭
+- **해결:** 부스트 중 `MOVE_Flying` 전환, `StopMovementImmediately`로 관성 제거
+- **결과:** 직선 돌진 궤적 확보, 체감 속도 개선
+
+### 3) 보스 광역 패턴이 피격 리액션으로 취소되는 문제
+- **원인:** 패턴 시전 중 HitReact 몽타주가 강제 재생
+- **해결:** 패턴 시 `State.SuperArmor` 태그 부여 후 피격 함수에서 태그 검사
+- **결과:** 보스 패턴 안정성 확보 및 AI 상태 이탈 방지
+
+### 4) 피격 몽타주 섹션 연동 오류와 과호출
+- **원인:** 섹션 링크 설정 누락과 연속 호출 차단 로직 부재
+- **해결:** 몽타주 섹션 링크 정리와 `bCanPlayHitReact` 타이머 쿨다운 추가
+- **결과:** 피격 연출 품질 개선, 과도한 애니메이션 재생 방지
+
+---
+
+## 🙋 담당 역할 요약 (Role Summary)
+
+- 전투 코어 시스템 설계 및 구현
+- GAS 능력 구조 설계 및 상태 규칙 정립
+- Event-Driven UI 연동 및 갱신 최적화
+- 적 AI 및 보스 패턴 구현
+- 미션 흐름 및 게임 상태 관리
+- 전투 관련 트러블슈팅 및 안정화
+
+---
+
+
+## 📂 폴더 구조 (Directory Structure)
+
 ```text
 Source/Project_Mecha/
 ├─ MechaCharacterBase.*      # 플레이어 코어 전투 로직
