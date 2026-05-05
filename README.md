@@ -2,7 +2,7 @@
 
 ![메인 게임플레이](./Images/Skill2.gif)
 ![부스트 및 전투 연출](./Images/Skill7.gif)
-![미사일 및 보스전 연출](./Images/Skill5.gif)
+
 
 > "Unreal Engine 5의 GAS(Gameplay Ability System)와 Event-Driven 아키텍처를 기반으로 설계된 3D 메카 액션 게임"
 
