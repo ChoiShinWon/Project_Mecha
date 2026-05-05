@@ -110,38 +110,74 @@
 
 ## 🌟 주요 기능 상세 (Features)
 
-- **플레이어 전투 코어 로직**  
-  입력 처리, 락온, 피격 방향 판정, 전투 흐름 제어  
-  → `MechaCharacterBase.cpp`
+### 1) 플레이어 전투 코어 로직
+입력 처리, 락온, 피격 방향 판정, 전투 흐름 제어
 
-- **GAS 스탯 시스템**  
-  체력, 에너지, 탄약 Attribute 정의 및 보정  
-  → `MechaAttributeSet.cpp`
+- 핵심 구현: `Enhanced Input` 이벤트 처리, 락온 타겟 탐색, 카메라 보간, 피격 방향 판정
+- 관련 코드:
+  - [`MechaCharacterBase.h`](./Source/Project_Mecha/MechaCharacterBase.h)
+  - [`MechaCharacterBase.cpp`](./Source/Project_Mecha/MechaCharacterBase.cpp)
 
-- **부스트 능력 구현**  
-  물리 간섭 제거형 기동 처리 및 카메라 반응  
-  → `GA_AssaultBoost.cpp`
+### 2) GAS 스탯 시스템
+체력, 에너지, 탄약 Attribute 정의 및 보정
 
-- **사격 및 발사 조건 처리**  
-  태그 기반 발사 제약 및 전투 리소스 연동  
-  → `GA_GunFire.cpp`
+- 핵심 구현: Attribute Clamp, 초기 스탯 적용, 상태 연동
+- 관련 코드:
+  - [`MechaAttributeSet.h`](./Source/Project_Mecha/MechaAttributeSet.h)
+  - [`MechaAttributeSet.cpp`](./Source/Project_Mecha/MechaAttributeSet.cpp)
 
-- **유도 미사일 처리**  
-  Homing 타겟 지정 및 공간 쿼리 기반 타겟 필터링  
-  → `GA_MissleFire.cpp`
+### 3) 부스트 능력 구현
+물리 간섭 제거형 기동 처리 및 카메라 반응
 
-- **적 및 보스 전투 로직**  
-  AI 전투 행동, 보스 상태 전환, 피격 및 사망 처리  
-  → `EnemyMecha.cpp`
+- 핵심 구현: `MOVE_Flying` 전환, `StopMovementImmediately` 적용, 종료 시 이동 모드 복귀
+- 관련 코드:
+  - [`GA_AssaultBoost.h`](./Source/Project_Mecha/GA_AssaultBoost.h)
+  - [`GA_AssaultBoost.cpp`](./Source/Project_Mecha/GA_AssaultBoost.cpp)
 
-- **미션 및 보스 페이즈 관리**  
-  Tick-less 미션 진행, 킬 카운트, 보스 페이즈 전환  
-  → `MissionManager.cpp`
+### 4) 사격 및 발사 조건 처리
+태그 기반 발사 제약 및 전투 리소스 연동
 
-- **이벤트 기반 HUD 업데이트**  
-  Delegate 기반 실시간 UI 반영  
-  → `WBP_MechaHUD.cpp`
+- 핵심 구현: 재장전/차단 상태 태그 검사, 발사 조건 제어
+- 관련 코드:
+  - [`GA_GunFire.h`](./Source/Project_Mecha/GA_GunFire.h)
+  - [`GA_GunFire.cpp`](./Source/Project_Mecha/GA_GunFire.cpp)
 
+### 5) 유도 미사일 처리
+Homing 타겟 지정 및 공간 쿼리 기반 타겟 필터링
+
+- 핵심 구현: `ProjectileMovementComponent` Homing 설정, `OverlapMultiByChannel` 기반 탐색
+- 관련 코드:
+  - [`GA_MissleFire.h`](./Source/Project_Mecha/GA_MissleFire.h)
+  - [`GA_MissleFire.cpp`](./Source/Project_Mecha/GA_MissleFire.cpp)
+
+### 6) 적 및 보스 전투 로직
+AI 전투 행동, 보스 상태 전환, 피격 및 사망 처리
+
+- 핵심 구현: Enemy 전투 상태 처리, Boss 패턴 안정화, 슈퍼아머 태그 연동
+- 관련 코드:
+  - [`EnemyMecha.h`](./Source/Project_Mecha/EnemyMecha.h)
+  - [`EnemyMecha.cpp`](./Source/Project_Mecha/EnemyMecha.cpp)
+  - [`GA_BossMissileRain.cpp`](./Source/Project_Mecha/GA_BossMissileRain.cpp)
+
+### 7) 미션 및 보스 페이즈 관리
+Tick-less 미션 진행, 킬 카운트, 보스 페이즈 전환
+
+- 핵심 구현: `NotifyEnemyKilled`, `StartBossPhase`, `NotifyBossDefeated`
+- 관련 코드:
+  - [`MissionManager.h`](./Source/Project_Mecha/MissionManager.h)
+  - [`MissionManager.cpp`](./Source/Project_Mecha/MissionManager.cpp)
+
+### 8) 이벤트 기반 HUD 업데이트
+Delegate 기반 실시간 UI 반영
+
+- 핵심 구현: Attribute 변경 Delegate 바인딩, 플레이어/적 체력 UI 갱신
+- 관련 코드:
+  - [`WBP_MechaHUD.h`](./Source/Project_Mecha/WBP_MechaHUD.h)
+  - [`WBP_MechaHUD.cpp`](./Source/Project_Mecha/WBP_MechaHUD.cpp)
+  - [`WBP_EnemyHealth.h`](./Source/Project_Mecha/WBP_EnemyHealth.h)
+  - [`WBP_EnemyHealth.cpp`](./Source/Project_Mecha/WBP_EnemyHealth.cpp)
+  - [`BossHealthWidget.h`](./Source/Project_Mecha/BossHealthWidget.h)
+  - [`BossHealthWidget.cpp`](./Source/Project_Mecha/BossHealthWidget.cpp)
 ---
 
 ## 🧪 트러블슈팅 (Troubleshooting)
