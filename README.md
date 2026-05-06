@@ -8,13 +8,6 @@
 
 ---
 
-## 🔗 프로젝트 링크 (Links)
-
-- **Repository:** [GitHub Repository 링크 입력](#)
-- **시연 영상(선택):** [YouTube 또는 Vimeo 링크 입력](#)
-
----
-
 ## 📖 프로젝트 개요 (Overview)
 
 - **프로젝트 성격:** 개인 포트폴리오용 정리 저장소
